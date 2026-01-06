@@ -4,7 +4,6 @@ import com.gaia3d.TilerExtensionModule;
 import com.gaia3d.basic.types.FormatType;
 import com.gaia3d.converter.AttributeFilter;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.CommandLine;
@@ -17,10 +16,8 @@ import org.locationtech.proj4j.CoordinateReferenceSystem;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,10 +27,10 @@ import java.util.List;
  */
 @Setter
 @Getter
-@NoArgsConstructor
 @Slf4j
 public class GlobalOptions {
     private static GlobalOptions instance = new GlobalOptions();
+    private CommandLineConfiguration commandLineConfiguration = new DefaultCommandLineConfiguration();
 
     private boolean isParametric = false;
 
@@ -128,6 +125,10 @@ public class GlobalOptions {
     private boolean debugLod = false;
     private boolean isLeaveTemp = false;
     private byte multiThreadCount = 3;
+
+    private GlobalOptions () {
+        // Private constructor for singleton
+    }
 
     public static void recreateInstance() {
         log.info("[INFO] Recreating GlobalOptions instance.");
