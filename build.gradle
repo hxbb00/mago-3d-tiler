@@ -110,7 +110,7 @@ tasks.register('release') {
     dependsOn(':mago-tiler:jib')
 }
 
-tasks.register('javadoc', Javadoc) {
+tasks.register('all-javadoc', Javadoc) {
     group = 'Documentation'
     description = 'Generates Javadoc for mago-3d-tiler module.'
 
