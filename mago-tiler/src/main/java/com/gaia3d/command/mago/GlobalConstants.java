@@ -10,6 +10,7 @@ public class GlobalConstants {
     public static final String DEFAULT_TILES_VERSION = "1.1";
     public static final String DEFAULT_INPUT_FORMAT = "kml";
     public static final String DEFAULT_INSTANCE_FILE = "instance.dae";
+    public static final String DEFAULT_TEMP_FOLDER = "temp";
     public static final int DEFAULT_MIN_LOD = 0;
     public static final int DEFAULT_MAX_LOD = 3;
     public static final int DEFAULT_MIN_GEOMETRIC_ERROR = 16;
@@ -19,8 +20,8 @@ public class GlobalConstants {
     public static final int DEFAULT_MAX_INSTANCE = 1024 * 64;
     public static final int DEFAULT_MAX_I3DM_FEATURE_COUNT = 1024;
     public static final int DEFAULT_MIN_I3DM_FEATURE_COUNT = 128;
-    public static final int DEFAULT_POINT_PER_TILE = 300000;
-    public static final int DEFAULT_POINT_RATIO = 100;
+    public static final int DEFAULT_POINT_PER_TILE = 200000;
+    public static final float DEFAULT_POINT_RATIO = 100;
     public static final float POINTSCLOUD_HORIZONTAL_GRID = 500.0f; // in meters
     public static final float POINTSCLOUD_VERTICAL_GRID = 500.0f; // in meters
     public static final float POINTSCLOUD_HORIZONTAL_ARC = (1.0f / 60.0f / 60.0f) * 20.0f;

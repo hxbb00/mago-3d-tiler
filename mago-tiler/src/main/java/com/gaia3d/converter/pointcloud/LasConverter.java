@@ -1,90 +1,48 @@
 package com.gaia3d.converter.pointcloud;
 
 import com.gaia3d.basic.geometry.GaiaBoundingBox;
-import com.gaia3d.basic.pointcloud.GaiaPointCloud;
-import com.gaia3d.basic.pointcloud.GaiaPointCloudHeader;
-import com.gaia3d.basic.pointcloud.GaiaPointCloudTemp;
-import com.gaia3d.command.mago.GlobalConstants;
-import com.gaia3d.command.mago.GlobalOptions;
+import com.gaia3d.converter.pointcloud.shuffler.*;
 import com.gaia3d.util.GlobeUtils;
-import com.github.mreutegg.laszip4j.CloseablePointIterable;
-import com.github.mreutegg.laszip4j.LASHeader;
-import com.github.mreutegg.laszip4j.LASPoint;
-import com.github.mreutegg.laszip4j.LASReader;
-import lombok.RequiredArgsConstructor;
+import com.github.mreutegg.laszip4j.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
+import org.geotools.api.geometry.Position;
+import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.geometry.Position2D;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.joml.Vector3d;
+import org.locationtech.proj4j.BasicCoordinateTransform;
 import org.locationtech.proj4j.CRSFactory;
-import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.locationtech.proj4j.CoordinateReferenceSystem;
+import org.locationtech.proj4j.ProjCoordinate;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
-@RequiredArgsConstructor
 public class LasConverter {
-    public List<GaiaPointCloud> load(String path) {
-        return convert(new File(path));
-    }
+    /* positions(24) + rgb(4) + intensity(2) + classification(2) = 32 bytes */
+    public static final int COARSE_LEVEL = 13;
+    public static final int POINT_BLOCK_SIZE = 32;
+    private final LasConverterOptions options;
+    private final BucketWriter bucketWriter;
+    private final BucketReader bucketReader;
 
-    public List<GaiaPointCloud> load(File file) {
-        return convert(file);
-    }
-
-    public List<GaiaPointCloud> load(Path path) {
-        return convert(path.toFile());
-    }
-
-    public GaiaPointCloudHeader readHeader(File file) {
-        LASReader reader = new LASReader(file);
-        LASHeader header = reader.getHeader();
-
-        GlobalOptions globalOptions = GlobalOptions.getInstance();
-
-        double getMinX = header.getMinX();
-        double getMinY = header.getMinY();
-        double getMinZ = header.getMinZ();
-        double getMaxX = header.getMaxX();
-        double getMaxY = header.getMaxY();
-        double getMaxZ = header.getMaxZ();
-        Vector3d min = new Vector3d(getMinX, getMinY, getMinZ);
-        Vector3d max = new Vector3d(getMaxX, getMaxY, getMaxZ);
-
-        // Apply translation offset
-        Vector3d transform = globalOptions.getTranslateOffset();
-        if (transform != null) {
-            min = new Vector3d(min.x + transform.x, min.y + transform.y, min.z + transform.z);
-            max = new Vector3d(max.x + transform.x, max.y + transform.y, max.z + transform.z);
+    public LasConverter(LasConverterOptions options) {
+        this.options = options;
+        try {
+            this.bucketWriter = new BucketWriter(options.getTempDirectory());
+            this.bucketReader = new BucketReader();
+        } catch (IOException e) {
+            log.error("[ERROR] Failed to initialize BucketWriter.", e);
+            throw new RuntimeException(e);
         }
-
-        if (min.x > max.x || min.y > max.y || min.z > max.z) {
-            log.error("[ERROR] Min point is greater than Max point.");
-            return null;
-        } else if (min.x == max.x && min.y == max.y && min.z == max.z) {
-            log.error("[ERROR] Min point is equal to Max point.");
-            return null;
-        } else if (min.x == 0 && min.y == 0 && min.z == 0 && max.x == 0 && max.y == 0 && max.z == 0) {
-            log.error("[ERROR] Min point and Max point are all zero.");
-            return null;
-        }
-
-        GaiaBoundingBox srsBoundingBox = new GaiaBoundingBox();
-        srsBoundingBox.addPoint(min);
-        srsBoundingBox.addPoint(max);
-
-        long pointRecords = header.getNumberOfPointRecords();
-        long legacyPointRecords = header.getLegacyNumberOfPointRecords();
-        long totalPointRecords = pointRecords + legacyPointRecords;
-        return GaiaPointCloudHeader.builder().index(-1).uuid(UUID.randomUUID()).size(totalPointRecords).srsBoundingBox(srsBoundingBox).build();
     }
 
-    public void loadToTemp(GaiaPointCloudHeader pointCloudHeader, File file) {
-        GlobalOptions globalOptions = GlobalOptions.getInstance();
-
+    public void convert(File file) {
         LASReader reader = new LASReader(file);
         LASHeader header = reader.getHeader();
         double xScaleFactor = header.getXScaleFactor();
@@ -94,150 +52,278 @@ public class LasConverter {
         double zScaleFactor = header.getZScaleFactor();
         double zOffset = header.getZOffset();
 
-        // Apply translation offset
-        Vector3d transform = globalOptions.getTranslateOffset();
-        if (transform != null) {
-            xOffset = xOffset + transform.x;
-            yOffset = yOffset + transform.y;
-            zOffset = zOffset + transform.z;
-        }
-
         CloseablePointIterable pointIterable = reader.getCloseablePoints();
         long pointRecords = header.getNumberOfPointRecords();
         long legacyPointRecords = header.getLegacyNumberOfPointRecords();
-        long totalPointsSize = pointRecords + legacyPointRecords;
+        long totalPointsSize = pointRecords == 0 ? legacyPointRecords : pointRecords;
         byte recordFormatValue = header.getPointDataRecordFormat();
-        boolean hasRgbColor;
         LasRecordFormat recordFormat = LasRecordFormat.fromFormatNumber(recordFormatValue);
-        if (recordFormat != null) {
-            hasRgbColor = recordFormat.hasColor;
-        } else {
-            hasRgbColor = false;
-        }
+        boolean hasRgbColor = recordFormat != null && recordFormat.hasColor;
+        printHeaderInfo(header);
 
-        String version = header.getVersionMajor() + "." + header.getVersionMinor();
-        String systemId = header.getSystemIdentifier();
-        String softwareId = header.getGeneratingSoftware();
-        String fileCreationDate = (short) header.getFileCreationYear() + "-" + (short) header.getFileCreationDayOfYear();
-        String headerSize = (short) header.getHeaderSize() + " bytes";
+        boolean isForce4ByteRGB = options.isForce4ByteRgb();
+        boolean isForceCrs = options.isForceCrs();
+        CoordinateReferenceSystem sourceCrs = getProjCRS(header, isForceCrs);
+        CoordinateReferenceSystem targetCrs = GlobeUtils.wgs84;
+        BasicCoordinateTransform transformer = new BasicCoordinateTransform(sourceCrs, targetCrs);
+        boolean needTransform = sourceCrs != null && !sourceCrs.equals(GlobeUtils.wgs84);
+        ProjCoordinate sourceCoord = new ProjCoordinate();
+        ProjCoordinate targetCoord = new ProjCoordinate();
 
-        log.debug("Version: {}", version);
-        log.debug("System ID: {}", systemId);
-        log.debug("Software ID: {}", softwareId);
-        log.debug("File Creation Date: {}", fileCreationDate);
-        log.debug("Header Size: {}", headerSize);
+        Vector3d translation = options.getTranslation();
+        boolean applyTranslation = translation.x != 0.0 || translation.y != 0.0 || translation.z != 0.0;
 
-        boolean isDefaultCrs = globalOptions.getSourceCrs().equals(GlobalConstants.DEFAULT_SOURCE_CRS);
-        try {
-            header.getVariableLengthRecords().forEach((record) -> {
-                if (isDefaultCrs && record.getUserID().equals("LASF_Projection")) {
-                    String wktCRS = record.getDataAsString();
-                    CoordinateReferenceSystem crs = GlobeUtils.convertWkt(wktCRS);
-                    if (crs != null) {
-                        var convertedCrs = GlobeUtils.convertProj4jCrsFromGeotoolsCrs(crs);
-                        globalOptions.setSourceCrs(convertedCrs);
-                        log.info(" - Coordinate Reference System : {}", wktCRS);
-                    } else {
-                        String epsg = GlobeUtils.extractEpsgCodeFromWTK(wktCRS);
-                        if (epsg != null) {
-                            CRSFactory factory = new CRSFactory();
-                            globalOptions.setSourceCrs(factory.createFromName("EPSG:" + epsg));
-                            log.info(" - Coordinate Reference System : {}", epsg);
-                        }
-                    }
-                }
-            });
-        } catch (Exception e) {
-            log.error("[ERROR] Failed to read LAS header.", e);
-        }
-
-        int percentage = globalOptions.getPointRatio();
+        float percentage = options.getPointPercentage();
         if (percentage < 1) {
             percentage = 1;
         } else if (percentage > 100) {
             percentage = 100;
         }
-        int volumeFactor = (int) Math.ceil(100.0 / percentage);
-        int count = 0;
+        int volumeFilter = (int) Math.ceil(100.0 / percentage);
+
+        boolean showProgress = totalPointsSize >= 1000000;
+        int progressInterval = (int) (totalPointsSize / 100);
+        if (progressInterval == 0) {
+            progressInterval = 1;
+        }
+
+        List<GridCoverage2D> geoTiffs = options.getGeoTiffs();
+        List<GridCoverage2D> geoidTiffs = options.getGeoidTiffs();
+        boolean hasTerrain = geoTiffs != null && !geoTiffs.isEmpty();
+        boolean hasGeoid = geoidTiffs != null && !geoidTiffs.isEmpty();
+        long index = 0;
         for (LASPoint point : pointIterable) {
-            if (count++ % volumeFactor != 0) {
+            if (index % volumeFilter != 0) {
+                index++;
                 continue;
+            }
+            if (showProgress && index % progressInterval == 0) {
+                int progress = (int) ((index * 100) / totalPointsSize);
+                log.info("[Load] - Processing point {}/{} ({}%)", index, totalPointsSize, progress);
             }
             double x = point.getX() * xScaleFactor + xOffset;
             double y = point.getY() * yScaleFactor + yOffset;
             double z = point.getZ() * zScaleFactor + zOffset;
 
-            Vector3d position = new Vector3d(x, y, z);
-
-            byte[] rgb;
-            if (hasRgbColor) {
-                if (globalOptions.isForce4ByteRGB()) {
-                    rgb = getColorByByteRGB(point); // only for test
-                } else {
-                    rgb = getColorByRGB(point);
-                }
-            } else {
-                rgb = new byte[3];
-                rgb[0] = (byte) 128;
-                rgb[1] = (byte) 128;
-                rgb[2] = (byte) 128;
+            if (applyTranslation) {
+                x += translation.x;
+                y += translation.y;
+                z += translation.z;
             }
 
-            int byteLength = 0;
-            byte[] intensity = convertToByteIntensity(point.getIntensity());
-            byte[] classification = convertToByteClassification(point.getClassification());
-            byteLength += 4; // 4 bytes for rgb
-            byteLength += intensity.length;
-            byteLength += classification.length;
+            if (needTransform) {
+                sourceCoord.x = x;
+                sourceCoord.y = y;
+                sourceCoord.z = z;
+                transformer.transform(sourceCoord, targetCoord);
+                x = targetCoord.x;
+                y = targetCoord.y;
+                z = targetCoord.z;
+            }
 
-            byte[] totalByte = new byte[byteLength];
-            // concatenate byte arrays
-            int index = 0;
-            System.arraycopy(rgb, 0, totalByte, index, rgb.length);
-            index += rgb.length;
-            System.arraycopy(intensity, 0, totalByte, index, intensity.length);
-            index += intensity.length;
-            System.arraycopy(classification, 0, totalByte, index, classification.length);
+            if (hasTerrain || hasGeoid) {
+                Vector3d cartographic = new Vector3d(x, y, z);
+                double terrainHeight = getTerrainHeightFromCartographic(geoTiffs, geoidTiffs, cartographic);
+                z += terrainHeight;
+            }
 
-            GaiaPointCloudTemp tempFile = pointCloudHeader.findTemp(position);
-            if (tempFile == null) {
-                log.error("[ERROR] Failed to find temp file.");
+            byte[] rgb = getRgbColor(point, hasRgbColor, isForce4ByteRGB);
+            GaiaLasPoint gaiaLasPoint = GaiaLasPoint.builder()
+                    .x(x)
+                    .y(y)
+                    .z(z)
+                    .r(rgb[0])
+                    .g(rgb[1])
+                    .b(rgb[2])
+                    .a((byte) 255)
+                    .intensity(point.getIntensity())
+                    .classification(point.getClassification())
+                    .build();
+            try {
+                bucketWriter.addPoint(gaiaLasPoint);
+            } catch (IOException e) {
+                log.error("[ERROR] Failed to write point to bucket.", e);
+                throw new RuntimeException(e);
+            }
+            index++;
+        }
+    }
+
+    private byte[] getRgbColor(LASPoint point, boolean hasRGB, boolean force4ByteRGB) {
+        if (hasRGB) {
+            if (force4ByteRGB) {
+                return getColorByByteRGB(point); // only for test
             } else {
-                tempFile.writePosition(position, totalByte);
+                return getColorByRGB(point);
+            }
+        } else {
+            byte[] rgb = new byte[3];
+            rgb[0] = (byte) -127;
+            rgb[1] = (byte) -127;
+            rgb[2] = (byte) -127;
+            return rgb;
+        }
+    }
+
+    private void printHeaderInfo(LASHeader header) {
+        String version = header.getVersionMajor() + "." + header.getVersionMinor();
+        String systemId = header.getSystemIdentifier();
+        String softwareId = header.getGeneratingSoftware();
+        String fileCreationDate = (short) header.getFileCreationYear() + "-" + (short) header.getFileCreationDayOfYear();
+        String headerSize = (short) header.getHeaderSize() + " bytes";
+        long pointRecords = header.getNumberOfPointRecords();
+        long legacyPointRecords = header.getLegacyNumberOfPointRecords();
+        long totalPointsSize = pointRecords == 0 ? legacyPointRecords : pointRecords;
+        byte recordFormatValue = header.getPointDataRecordFormat();
+        LasRecordFormat recordFormat = LasRecordFormat.fromFormatNumber(recordFormatValue);
+        boolean hasRgbColor = recordFormat != null && recordFormat.hasColor;
+
+        log.debug("=== LAS File Header Information ===");
+        log.debug("Version: {}", version);
+        log.debug("System ID: {}", systemId);
+        log.debug("Software ID: {}", softwareId);
+        log.debug("File Creation Date: {}", fileCreationDate);
+        log.debug("Header Size: {}", headerSize);
+        log.debug("Number of Point Records: {}", pointRecords);
+        log.debug("Legacy Number of Point Records: {}", legacyPointRecords);
+        log.debug("Total Number of Point Records: {}", totalPointsSize);
+    }
+
+    private CoordinateReferenceSystem getProjCRS(LASHeader header, boolean isForceCrs) {
+        AtomicReference<CoordinateReferenceSystem> atomicCrs = new AtomicReference<>(options.getSourceCrs());
+        boolean isDefaultCrs = options.getSourceCrs().equals(GlobeUtils.wgs84);
+        if (!isForceCrs && isDefaultCrs) {
+            try {
+                Iterable<LASVariableLengthRecord> records = header.getVariableLengthRecords();
+                if (records != null) {
+                    header.getVariableLengthRecords().forEach((record) -> {
+                        if (record.getUserID().equals("LASF_Projection")) {
+                            String wktCRS = record.getDataAsString();
+                            var crs = GlobeUtils.convertWkt(wktCRS);
+                            if (crs != null) {
+                                var convertedCrs = GlobeUtils.convertProj4jCrsFromGeotoolsCrs(crs);
+                                atomicCrs.set(convertedCrs);
+                            } else {
+                                String epsg = GlobeUtils.extractEpsgCodeFromWTK(wktCRS);
+                                if (epsg != null) {
+                                    CRSFactory factory = new CRSFactory();
+                                    var convertedCrs = factory.createFromName("EPSG:" + epsg);
+                                    atomicCrs.set(convertedCrs);
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                log.debug("[ERROR] Failed to read LAS header.", e);
+            }
+            log.info(" - Coordinate Reference System : {}", atomicCrs.get());
+        }
+        return atomicCrs.get();
+    }
+
+    public void close() {
+        try {
+            bucketWriter.close();
+        } catch (IOException e) {
+            log.error("[ERROR] Failed to close BucketWriter.", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public List<File> getBucketFiles() {
+        Path tempPath = options.getTempDirectory();
+        return FileUtils.listFiles(tempPath.toFile(), new String[]{"bin"}, true).stream().toList();
+    }
+
+    public void createVoxel() {
+        Path tempPath = options.getTempDirectory();
+        List<File> bucketFiles = getBucketFiles();
+        for (File bucketFile : bucketFiles) {
+            try {
+                GaiaBoundingBox boundingBox = new GaiaBoundingBox();
+                List<GaiaLasPoint> lasPoints = bucketReader.readFile(bucketFile.toPath());
+                // Convert geographic to ECEF
+                lasPoints = lasPoints.stream().parallel().peek(point -> {
+                    double[] pos = point.getPosition();
+                    double[] ecef = GlobeUtils.geographicToCartesianWgs84(pos[0], pos[1], pos[2]);
+                    point.setPosition(ecef);
+                }).toList();
+                for (GaiaLasPoint point : lasPoints) {
+                    double[] pos = point.getPosition();
+                    boundingBox.addPoint(pos[0], pos[1], pos[2]);
+                }
+                PointCloudOctree octree = new PointCloudOctree(null, boundingBox);
+                octree.addContents(lasPoints);
+                octree.setLimitDepth(10);
+                octree.setLimitBoxSize(25.0);
+                octree.makeTreeByMinVertexCount(10000);
+
+                log.info("Creating voxel for bucket file: {} with {} points", bucketFile.getName(), lasPoints.size());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }
 
-    private List<GaiaPointCloud> convert(File file) {
-        List<GaiaPointCloud> pointClouds = new ArrayList<>();
-        GaiaPointCloud pointCloud = new GaiaPointCloud();
-        GaiaBoundingBox boundingBox = pointCloud.getGaiaBoundingBox();
+    public void createShuffle() {
+        Shuffler shuffler = new OptimizedCardShuffler();
+
+        List<File> bucketFiles = getBucketFiles();
+        log.info("[Pre] Starting shuffling of {} bucket files...", bucketFiles.size());
+        // bucketFiles.stream().parallel().forEach(bucketFile -> {
+        int fileCount = bucketFiles.size();
+        int index = 0;
+        shuffler.setTotalProcessCount(fileCount);
+        for (File bucketFile : bucketFiles) {
+            File shuffledFile = new File(bucketFile.getParent(), "shuffled_" + bucketFile.getName());
+            log.info("[Pre][Shuffle][{}/{}] Shuffling bucket file: {}", ++index, fileCount, bucketFile.getAbsoluteFile());
+            shuffler.setProcessCount(index);
+            shuffler.shuffle(bucketFile, shuffledFile, POINT_BLOCK_SIZE);
+            boolean isSameSize = bucketFile.length() == shuffledFile.length();
+            if (!isSameSize) {
+                log.warn("Shuffled file size does not match original! Original: {}, Shuffled: {}", bucketFile.length(), shuffledFile.length());
+                throw new RuntimeException("Shuffled file size mismatch.");
+            } else {
+                try {
+                    FileUtils.delete(bucketFile);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                try {
+                    FileUtils.moveFile(shuffledFile, bucketFile);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            log.info("[Pre][Shuffle][{}/{}] Completed shuffling bucket file: {}", index, fileCount, bucketFile.getAbsoluteFile());
+        }
+        shuffler.clear();
+        log.info("[Pre] Completed shuffling of bucket files.");
+    }
+
+    public GaiaPointCloud readTempFileToGaiaPointCloud(File sourceFile, File targetFile) {
         try {
-            GaiaPointCloudTemp readTemp = new GaiaPointCloudTemp(file);
-            readTemp.readHeader();
-
-            double[] quantizationOffset = readTemp.getQuantizedVolumeOffset();
-            double[] quantizationScale = readTemp.getQuantizedVolumeScale();
-            double[] originalMinPosition = new double[]{quantizationOffset[0], quantizationOffset[1], quantizationOffset[2]};
-            double[] originalMaxPosition = new double[]{quantizationOffset[0] + quantizationScale[0], quantizationOffset[1] + quantizationScale[1], quantizationOffset[2] + quantizationScale[2]};
-            Vector3d minPosition = new Vector3d(originalMinPosition[0], originalMinPosition[1], originalMinPosition[2]);
-            Vector3d maxPosition = new Vector3d(originalMaxPosition[0], originalMaxPosition[1], originalMaxPosition[2]);
-
-            boundingBox.addPoint(minPosition);
-            boundingBox.addPoint(maxPosition);
-
-            readTemp.getInputStream().close();
+            return bucketReader.readFileToGaiaPointCloud(sourceFile, targetFile);
         } catch (IOException e) {
+            log.error("[ERROR] Failed to read shuffled file: {}", sourceFile.getAbsolutePath(), e);
             throw new RuntimeException(e);
         }
+    }
 
-        GaiaPointCloudTemp readTemp = new GaiaPointCloudTemp(file);
-        pointCloud.setMinimized(true);
-        pointCloud.setVertices(null);
-        pointCloud.setGaiaBoundingBox(boundingBox);
-        pointCloud.setPointCloudTemp(readTemp);
-        pointClouds.add(pointCloud);
-        return pointClouds;
+    public List<GaiaLasPoint> readTempFile(File tempFile) {
+        try {
+            return bucketReader.readFile(tempFile.toPath());
+        } catch (IOException e) {
+            log.error("[ERROR] Failed to read shuffled file: {}", tempFile.getAbsolutePath(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private float calculateSpacing(GaiaBoundingBox bbox, long pointCount) {
+        float spacing = (float) Math.sqrt(((bbox.getMaxX() - bbox.getMinX()) * (bbox.getMaxY() - bbox.getMinY())) / pointCount);
+        spacing = Math.round(spacing * 1000.0f) / 1000.0f;
+        return spacing;
     }
 
     /**
@@ -267,21 +353,54 @@ public class LasConverter {
         rgb[0] = (byte) point.getRed();
         rgb[1] = (byte) point.getGreen();
         rgb[2] = (byte) point.getBlue();
-
         return rgb;
     }
 
-    private byte[] convertToByteIntensity(char intensity) {
-        byte[] rgb = new byte[2];
-        rgb[0] = (byte) ((intensity >> 8) & 0xFF); // High byte
-        rgb[1] = (byte) (intensity & 0xFF); // Low byte
-        return rgb;
-    }
+    private double getTerrainHeightFromCartographic(List<GridCoverage2D> terrains, List<GridCoverage2D> geoids, Vector3d cartographic) {
+        Vector3d center = new Vector3d(cartographic.x, cartographic.y, 0.0);
+        Position position = new Position2D(DefaultGeographicCRS.WGS84, center.x, center.y);
+        double resultHeight = 0.0d;
+        if (terrains != null && !terrains.isEmpty()) {
+            for (GridCoverage2D coverage : terrains) {
+                double[] altitude = new double[1];
+                altitude[0] = 0.0d;
 
-    private byte[] convertToByteClassification(short classification) {
-        byte[] rgb = new byte[2];
-        rgb[0] = (byte) ((classification >> 8) & 0xFF); // High byte
-        rgb[1] = (byte) (classification & 0xFF); // Low byte
-        return rgb;
+                try {
+                    coverage.evaluate(position, altitude);
+                } catch (Exception e) {
+                    log.debug("[DEBUG] Failed to load terrain height. Out of range");
+                }
+
+                if (Double.isInfinite(altitude[0])) {
+                    log.debug("[DEBUG] Failed to load terrain height. Infinite value encountered");
+                } else if (Double.isNaN(altitude[0])) {
+                    log.debug("[DEBUG] Failed to load terrain height. NaN value encountered");
+                } else {
+                    resultHeight += altitude[0];
+                }
+            }
+        }
+
+        if (geoids != null && !geoids.isEmpty()) {
+            for (GridCoverage2D coverage : geoids) {
+                double[] geoidHeight = new double[1];
+                geoidHeight[0] = 0.0d;
+
+                try {
+                    coverage.evaluate(position, geoidHeight);
+                } catch (Exception e) {
+                    log.debug("[DEBUG] Failed to load geoid height. Out of range");
+                }
+
+                if (Double.isInfinite(geoidHeight[0])) {
+                    log.debug("[DEBUG] Failed to load geoid height. Infinite value encountered");
+                } else if (Double.isNaN(geoidHeight[0])) {
+                    log.debug("[DEBUG] Failed to load geoid height. NaN value encountered");
+                } else {
+                    resultHeight += geoidHeight[0];
+                }
+            }
+        }
+        return resultHeight;
     }
 }

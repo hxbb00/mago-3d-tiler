@@ -90,11 +90,20 @@ public class TilingPipeline implements Pipeline {
                         return;
                     }
                     int infoLength = loadedTileInfos.size();
+                    boolean manyTiles = infoLength > 100000;
+                    int percentageStep = infoLength / 100;
                     nodeCount.addAndGet(infoLength);
                     for (int index = 0; index < infoLength; index++) {
                         TileInfo tileInfo = loadedTileInfos.get(index);
                         if (tileInfo != null) {
-                            log.info("[Pre][{}/{}][{}/{}] Loading tiles from file.", finalCount + 1, fileCount, index + 1, infoLength);
+                            if (manyTiles) {
+                                if (index % percentageStep == 0 || index == infoLength - 1) {
+                                    int percent = (index / percentageStep);
+                                    log.info("[Pre][{}/{}][{}/{}] Processing tile info. {}%", finalCount + 1, fileCount, index + 1, infoLength, percent);
+                                }
+                            } else {
+                                log.info("[Pre][{}/{}][{}/{}] Processing tile info.", finalCount + 1, fileCount, index + 1, infoLength);
+                            }
                             tileInfo.setSerial(index + 1);
                             for (PreProcess preProcessors : preProcesses) {
                                 preProcessors.run(tileInfo);
@@ -133,10 +142,12 @@ public class TilingPipeline implements Pipeline {
         int contentCount = contentInfos.size();
         globalOptions.setTileCount(contentCount);
 
+        // Sort contentInfos by node code length to ensure parent nodes are processed before child nodes
+        contentInfos.sort((c1, c2) -> c1.getNodeCode().length() - c2.getNodeCode().length());
         for (ContentInfo contentInfo : contentInfos) {
             Runnable callableTask = () -> {
                 try {
-                    log.info("[Post][{}/{}] post-process in progress. : {}", count.getAndIncrement(), contentCount, contentInfo.getName());
+                    log.info("[Post][{}/{}] post-process in progress : {}", count.getAndIncrement(), contentCount, contentInfo.getName());
                     List<TileInfo> tileInfos = contentInfo.getTileInfos();
                     List<TileInfo> tileInfosClone = tileInfos.stream()
                             .map((childTileInfo) -> TileInfo.builder()
@@ -147,6 +158,7 @@ public class TilingPipeline implements Pipeline {
                                     .transformMatrix(childTileInfo.getTransformMatrix())
                                     .boundingBox(childTileInfo.getBoundingBox())
                                     .pointCloud(childTileInfo.getPointCloud())
+                                    /*.pointCloudOld(childTileInfo.getPointCloudOld())*/
                                     .build())
                             .collect(Collectors.toList());
                     contentInfo.setTileInfos(tileInfosClone);
@@ -167,22 +179,25 @@ public class TilingPipeline implements Pipeline {
 
     private void createTemp(FileLoader fileLoader) {
         /* create temp directory */
-        File tempFile = new File(globalOptions.getOutputPath(), "temp");
+        File tempFile = new File(globalOptions.getTempPath());
         if (!tempFile.exists() && tempFile.mkdirs()) {
             log.info("[Pre] Created temp directory in {}", tempFile.getAbsolutePath());
         }
         fileList = fileLoader.loadTemp(tempFile, fileList);
     }
 
-    private void deleteTemp() throws IOException {
+    private void deleteTemp() {
         if (globalOptions.isLeaveTemp()) {
             return;
         }
 
-        /* delete temp directory */
-        File tempFile = new File(globalOptions.getOutputPath(), "temp");
-        if (tempFile.exists() && tempFile.isDirectory()) {
-            FileUtils.deleteDirectory(tempFile);
+        File userTempFile = new File(globalOptions.getTempPath());
+        if (userTempFile.exists() && userTempFile.isDirectory()) {
+            try {
+                FileUtils.deleteDirectory(userTempFile);
+            } catch (Exception e) {
+                log.error("[WARN] Failed to delete temp directory in {}", userTempFile.getAbsolutePath(), e);
+            }
         }
     }
 

@@ -4,10 +4,10 @@ import com.gaia3d.TilerExtensionModule;
 import com.gaia3d.basic.types.FormatType;
 import com.gaia3d.converter.AttributeFilter;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.joml.Vector3d;
 import org.locationtech.proj4j.CRSFactory;
@@ -15,6 +15,10 @@ import org.locationtech.proj4j.CoordinateReferenceSystem;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,97 +27,108 @@ import java.util.List;
  */
 @Setter
 @Getter
-@NoArgsConstructor
 @Slf4j
 public class GlobalOptions {
     private static GlobalOptions instance = new GlobalOptions();
+    private CommandLineConfiguration commandLineConfiguration = new DefaultCommandLineConfiguration();
 
     private boolean isParametric = false;
 
+    /* 0.1 Analysis Info */
     private String tilesVersion;
     private String version;
     private String javaVersionInfo;
     private String programInfo;
-
     private long fileCount = 0;
     private long tileCount = 0;
     private long tilesetSize = 0;
+    private long startTimeMillis = System.currentTimeMillis();
+    private long endTimeMillis = 0;
 
-    /* Required Options */
+    /* 0.2 System Info */
+    private long availableProcessors = Runtime.getRuntime().availableProcessors();
+    private long maxHeapMemory = Runtime.getRuntime().maxMemory();
+    //private long freeMemory = Runtime.getRuntime().freeMemory();
+    //private long totalMemory = Runtime.getRuntime().totalMemory();
+    //private long usedMemory = totalMemory - freeMemory;
+    private long startTime = System.currentTimeMillis();
+    private long endTime = 0;
+
+    /* 1.1 Required Path Options */
     private String inputPath;
     private String outputPath;
-
-    /* Optional Options */
+    /* 1.2 Optional Path Options */
     private String logPath;
     private String terrainPath;
+    private String geoidPath;
     private String instancePath;
+    private String tempPath;
 
+    /* 2.1 Format Options */
     private FormatType inputFormat;
+    private boolean isAutoDetectInputFormat = false;
     private FormatType outputFormat;
-
+    /* 2.2 Coordinate Reference System Options */
+    private boolean forceCrs = false;
     private CoordinateReferenceSystem sourceCrs;
     private CoordinateReferenceSystem targetCrs;
     private String proj;
     private Vector3d translateOffset;
 
-    private boolean isSourcePrecision = false;
-    private int maximumPointPerTile = 0; // Maximum number of points per a tile
-    private int pointRatio = 0; // Percentage of points from original data
-    private boolean force4ByteRGB = false; // Force 4Byte RGB for pointscloud tile
-
-    // Use quantization via KHR_mesh_quantization
-    private boolean useQuantization;
-    private boolean useByteNormal = false;
-    private boolean useShortTexCoord = false;
-
-    /* Tiling Options */
-    // Level of Detail
+    /* 3.1 Tiling Options */
+    // 3.1 Basic Tiling Options
     private int minLod;
     private int maxLod;
-    // Geometric Error
     private int minGeometricError;
     private int maxGeometricError;
-    // Tile Options
+    private boolean classicTransformMatrix = false;
+    // 3.2 Tile Options
     private int maxTriangles;
     private int maxInstance;
     private int maxNodeDepth;
 
-    // Debug Mode
-    private boolean debug = false;
-    private boolean debugLod = false;
-    private boolean isLeaveTemp = false;
+    /* 3.3 Point Cloud Options */
+    private boolean isSourcePrecision = false;
+    private int maximumPointPerTile = 0; // Maximum number of points per a tile
+    private float pointRatio = 0; // Percentage of points from original data
+    private boolean force4ByteRGB = false; // Force 4Byte RGB for pointscloud tile
 
-    private boolean doubleSided = true;
-    private boolean glb = false;
-    private boolean classicTransformMatrix = false;
-    private byte multiThreadCount = 1;
-
-    /* 3D Data Options */
+    /* 3.4 3D Data Options */
+    private boolean useQuantization = false;
+    private boolean useByteNormal = false;
+    private boolean useShortTexCoord = false;
     private boolean recursive = false;
     private double rotateX = 0; // degrees
-
+    private boolean doubleSided = true;
+    private boolean glb = false;
     private boolean refineAdd = false; // 3dTiles refine option ADD fix flag
     private boolean flipCoordinate = false; // flip coordinate flag for 2D Data
     private boolean ignoreTextures = false; // ignore textures flag
-
-    // [Experimental] 3D Data Options
     private boolean isPhotogrammetry = false; // [Experimental] isPhotogrammetry mode flag
     private boolean isSplitByNode = false; // [Experimental] split by node flag
     private boolean isCurvatureCorrection = false; // [Experimental] curvature correction flag
 
-    /* 2D Data Column Options */
+    /* 3.5 2D Data Column Options */
     private String heightColumn = null;
     private String altitudeColumn = null;
     private String headingColumn = null;
     private String diameterColumn = null;
     private String scaleColumn = null;
     private String densityColumn = null;
-
     private double absoluteAltitude = 0.0d;
     private double minimumHeight = 0.0d;
     private double skirtHeight = 0.0d;
-
     private List<AttributeFilter> attributeFilters = new ArrayList<>();
+
+    /* 4.1 Debug Mode */
+    private boolean debug = false;
+    private boolean debugLod = false;
+    private boolean isLeaveTemp = false;
+    private byte multiThreadCount = 3;
+
+    private GlobalOptions () {
+        // Private constructor for singleton
+    }
 
     public static void recreateInstance() {
         log.info("[INFO] Recreating GlobalOptions instance.");
@@ -154,6 +169,29 @@ public class GlobalOptions {
             OptionsCorrector.checkExistOutput(output);
         } else {
             throw new IllegalArgumentException("Please enter the value of the output argument.");
+        }
+
+        instance.setLeaveTemp(command.hasOption(ProcessOptions.LEAVE_TEMP.getLongName()));
+        if (command.hasOption(ProcessOptions.TEMP_PATH.getLongName())) {
+            String tempPath = command.getOptionValue(ProcessOptions.TEMP_PATH.getLongName());
+            String sufix = java.util.UUID.randomUUID().toString();
+            File tempFullPath = new File(tempPath, sufix);
+            OptionsCorrector.checkExistOutput(tempFullPath);
+            instance.setTempPath(tempFullPath.getAbsolutePath());
+        } else {
+            File tempDir = new File(outputPath, GlobalConstants.DEFAULT_TEMP_FOLDER);
+            String tempPath = tempDir.getAbsolutePath();
+            instance.setTempPath(tempPath);
+            OptionsCorrector.checkExistOutput(tempDir);
+        }
+        if (!instance.isLeaveTemp()) {
+            // Delete temp directory if exists
+            File tempDir = new File(instance.getTempPath());
+            String[] children = tempDir.list();
+            if (tempDir.exists() && tempDir.isDirectory() && children != null && children.length > 0) {
+                log.info("[INFO] Deleting existing temp directory: {}", tempDir.getAbsolutePath());
+                FileUtils.deleteDirectory(tempDir);
+            }
         }
 
         if (command.hasOption(ProcessOptions.TILES_VERSION.getLongName())) {
@@ -212,7 +250,41 @@ public class GlobalOptions {
             OptionsCorrector.checkExistInputPath(new File(instance.getTerrainPath()));
         } else {
             instance.setTerrainPath(null);
-            log.info("[Info] Terrain path is not set. No terrain data will be used.");
+        }
+
+        if (command.hasOption(ProcessOptions.GEOID_PATH.getLongName())) {
+            String geoidPath = command.getOptionValue(ProcessOptions.GEOID_PATH.getLongName());
+            if (geoidPath == null || geoidPath.isEmpty() || geoidPath.equalsIgnoreCase("Ellipsoid")) {
+                instance.setGeoidPath(null);
+            } else if (geoidPath.equalsIgnoreCase("EGM96")) {
+                log.info("Using built-in geoid model: EGM96");
+
+                String resourcePath = "geoid/egm96_15.tif";
+                ClassLoader classLoader = GlobalOptions.class.getClassLoader();
+                try (InputStream in = classLoader.getResourceAsStream(resourcePath)) {
+                    if (in == null) {
+                        throw new IllegalArgumentException("EGM96 geoid model not found in resources: " + resourcePath);
+                    }
+                    Path tmp = Files.createTempFile("egm96_15-", ".tif");
+                    Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
+                    tmp.toFile().deleteOnExit();
+                    instance.setGeoidPath(tmp.toAbsolutePath().toString());
+                } catch (IOException e) {
+                    throw new IllegalStateException("Failed to extract EGM96 geoid model from classpath", e);
+                }
+                /*try {
+                    File egm96File = new File(classLoader.getResource("./geoid/egm96_15.tif").getFile());
+                    instance.setGeoidPath(egm96File.getAbsolutePath());
+                } catch (NullPointerException e) {
+                    log.error("[ERROR] EGM96 geoid model file not found in classpath resources.");
+                    throw new IllegalArgumentException("EGM96 geoid model file not found in classpath resources.");
+                }*/
+            } else {
+                instance.setGeoidPath(geoidPath);
+            }
+            OptionsCorrector.checkExistInputPath(new File(instance.getGeoidPath()));
+        } else {
+            instance.setGeoidPath(null);
         }
 
         if (command.hasOption(ProcessOptions.INSTANCE_PATH.getLongName())) {
@@ -230,6 +302,7 @@ public class GlobalOptions {
                 sourceCrs = new CRSFactory().createFromParameters("CUSTOM_CRS_PROJ", instance.getProj());
             }
             instance.setSourceCrs(sourceCrs);
+            instance.setForceCrs(true);
         }
 
         Vector3d translation = new Vector3d(0, 0, 0);
@@ -252,8 +325,14 @@ public class GlobalOptions {
 
             if (proj != null && !proj.isEmpty()) {
                 sourceCrs = factory.createFromParameters("CUSTOM_CRS_PROJ", proj);
+                instance.setForceCrs(true);
             } else if (crsString != null && !crsString.isEmpty()) {
+                if (crsString.toUpperCase().startsWith("EPSG:")) {
+                    crsString = crsString.substring(5);
+                    log.warn("[WARN] 'EPSG:' prefix is not required for CRS option. Use only the EPSG code number.");
+                }
                 sourceCrs = factory.createFromName("EPSG:" + crsString);
+                instance.setForceCrs(true);
             } else {
                 sourceCrs = GlobalConstants.DEFAULT_SOURCE_CRS;
             }
@@ -270,6 +349,7 @@ public class GlobalOptions {
             instance.setProj(proj);
             CoordinateReferenceSystem sourceCrs = factory.createFromParameters("CUSTOM_CRS_PROJ", proj);
             instance.setSourceCrs(sourceCrs);
+            instance.setForceCrs(true);
             log.info("Custom CRS: {}", proj);
         } else {
             CoordinateReferenceSystem sourceCrs = GlobalConstants.DEFAULT_SOURCE_CRS;
@@ -290,12 +370,11 @@ public class GlobalOptions {
         instance.setMaxInstance(GlobalConstants.DEFAULT_MAX_INSTANCE);
         instance.setMaxNodeDepth(GlobalConstants.DEFAULT_MAX_NODE_DEPTH);
         instance.setPhotogrammetry(command.hasOption(ProcessOptions.PHOTOGRAMMETRY.getLongName()));
-        instance.setLeaveTemp(command.hasOption(ProcessOptions.LEAVE_TEMP.getLongName()));
         instance.setUseQuantization(command.hasOption(ProcessOptions.MESH_QUANTIZATION.getLongName()) || GlobalConstants.DEFAULT_USE_QUANTIZATION);
 
         /* Point Cloud Options */
         instance.setMaximumPointPerTile(command.hasOption(ProcessOptions.MAX_POINTS.getLongName()) ? Integer.parseInt(command.getOptionValue(ProcessOptions.MAX_POINTS.getLongName())) : GlobalConstants.DEFAULT_POINT_PER_TILE);
-        instance.setPointRatio(command.hasOption(ProcessOptions.POINT_RATIO.getLongName()) ? Integer.parseInt(command.getOptionValue(ProcessOptions.POINT_RATIO.getLongName())) : GlobalConstants.DEFAULT_POINT_RATIO);
+        instance.setPointRatio(command.hasOption(ProcessOptions.POINT_RATIO.getLongName()) ? Float.parseFloat(command.getOptionValue(ProcessOptions.POINT_RATIO.getLongName())) : GlobalConstants.DEFAULT_POINT_RATIO);
         instance.setForce4ByteRGB(command.hasOption(ProcessOptions.POINT_FORCE_4BYTE_RGB.getLongName()));
 
         /* 2D Data Column Options */
@@ -309,10 +388,8 @@ public class GlobalOptions {
         instance.setAbsoluteAltitude(command.hasOption(ProcessOptions.ABSOLUTE_ALTITUDE.getLongName()) ? Double.parseDouble(command.getOptionValue(ProcessOptions.ABSOLUTE_ALTITUDE.getLongName())) : GlobalConstants.DEFAULT_ABSOLUTE_ALTITUDE);
         instance.setMinimumHeight(command.hasOption(ProcessOptions.MINIMUM_HEIGHT.getLongName()) ? Double.parseDouble(command.getOptionValue(ProcessOptions.MINIMUM_HEIGHT.getLongName())) : GlobalConstants.DEFAULT_MINIMUM_HEIGHT);
         instance.setSkirtHeight(command.hasOption(ProcessOptions.SKIRT_HEIGHT.getLongName()) ? Double.parseDouble(command.getOptionValue(ProcessOptions.SKIRT_HEIGHT.getLongName())) : GlobalConstants.DEFAULT_SKIRT_HEIGHT);
-
         instance.setSplitByNode(command.hasOption(ProcessOptions.SPLIT_BY_NODE.getLongName()));
 
-        // Attribute Filter ex) "classification=window,door;type=building"
         if (command.hasOption(ProcessOptions.ATTRIBUTE_FILTER.getLongName())) {
             List<AttributeFilter> attributeFilters = instance.getAttributeFilters();
             String[] filters = command.getOptionValue(ProcessOptions.ATTRIBUTE_FILTER.getLongName()).split(";");
@@ -342,6 +419,10 @@ public class GlobalOptions {
         boolean isParametric = inputFormat.equals(FormatType.GEOJSON) || inputFormat.equals(FormatType.SHP) || inputFormat.equals(FormatType.CITYGML) || inputFormat.equals(FormatType.INDOORGML) || inputFormat.equals(FormatType.GEO_PACKAGE);
         instance.setParametric(isParametric);
 
+        if (outputFormat.equals(FormatType.FOREST)) {
+            isRefineAdd = true;
+            instance.setTilesVersion("1.0");
+        }
         if (isParametric) {
             if (outputFormat.equals(FormatType.B3DM)) {
                 isRefineAdd = true;
@@ -354,15 +435,15 @@ public class GlobalOptions {
 
         if (command.hasOption(ProcessOptions.MULTI_THREAD_COUNT.getLongName())) {
             instance.setMultiThreadCount(Byte.parseByte(command.getOptionValue(ProcessOptions.MULTI_THREAD_COUNT.getLongName())));
+            System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", String.valueOf(instance.getMultiThreadCount()));
         } else {
             int processorCount = Runtime.getRuntime().availableProcessors();
             int threadCount = processorCount > 1 ? processorCount / 2 : 1;
-
-            // Limit to maximum 4 threads for I/O overload prevention
-            if (threadCount > 4) {
-                threadCount = 4;
+            if (threadCount > 3) {
+                threadCount = 3;
             }
             instance.setMultiThreadCount((byte) threadCount);
+            System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", String.valueOf(threadCount));
         }
 
         instance.printDebugOptions();
@@ -372,8 +453,8 @@ public class GlobalOptions {
         if (instance.isPhotogrammetry()) {
             instance.setUseQuantization(true);
             if (!extensionModule.isSupported()) {
-                log.error("[ERROR] *** Photogrammetry is not supported ***");
-                throw new IllegalArgumentException("Photogrammetry is not supported.");
+                log.error("[ERROR] *** Extension is not supported ***");
+                throw new IllegalArgumentException("Extension is not supported.");
             }
         }
 
@@ -383,7 +464,6 @@ public class GlobalOptions {
             instance.setUseByteNormal(true);
             instance.setUseShortTexCoord(true);
         }
-
     }
 
     private static void initVersionInfo() {
@@ -399,20 +479,46 @@ public class GlobalOptions {
         String programInfo = title + "(" + version + ") by " + vendor;
         instance.setProgramInfo(programInfo);
         instance.setJavaVersionInfo(javaVersionInfo);
+        instance.setAvailableProcessors(Runtime.getRuntime().availableProcessors());
+        instance.setMaxHeapMemory(Runtime.getRuntime().maxMemory());
+    }
+
+    public long getProcessTimeMillis() {
+        long endTimeMillis = System.currentTimeMillis();
+        long processTimeMillis = endTimeMillis - startTimeMillis;
+        return processTimeMillis;
     }
 
     public void printDebugOptions() {
+        log.info("Java Version Info: {}", javaVersionInfo);
+        log.info("Program Info: {}", programInfo);
+        log.info("Available Processors: {}", availableProcessors);
+        log.info("Max Heap Memory: {} MB", maxHeapMemory / (1024 * 1024));
         Mago3DTilerMain.drawLine();
         log.info("3DTiles Version: {}", tilesVersion);
         log.info("Input Path: {}", inputPath);
         log.info("Output Path: {}", outputPath);
+        log.info("Temp path: {}", tempPath);
         log.info("Input Format: {}", inputFormat);
         log.info("Output Format: {}", outputFormat);
+        if (FormatType.I3DM.equals(outputFormat)) {
+            log.info("Instance File Path: {}", instancePath);
+        }
         log.info("Terrain File Path: {}", terrainPath);
-        log.info("Instance File Path: {}", instancePath);
+        if (geoidPath == null) {
+            log.info("Geoid Model(Height Reference): Ellipsoid");
+        } else if (geoidPath.contains("egm96")) {
+            log.info("Geoid Model(Height Reference): EGM96");
+        } else {
+            log.info("Geoid Model(Height Reference): Custom -, {}, ", geoidPath);
+        }
         log.info("Log File Path: {}", logPath);
         log.info("Recursive Path Search: {}", recursive);
-        log.info("Source Coordinate Reference System: {}", sourceCrs);
+        if (!forceCrs) {
+            log.info("Source Coordinate Reference System: Auto Detection");
+        } else {
+            log.info("Source Coordinate Reference System: Forced {}", sourceCrs);
+        }
         log.info("Proj4 Code: {}", proj);
         log.info("Debug Mode: {}", debug);
         Mago3DTilerMain.drawLine();
@@ -420,6 +526,7 @@ public class GlobalOptions {
             return;
         }
         log.info("Leave Temp Files: {}", isLeaveTemp);
+        log.info("RefineAdd: {}", refineAdd);
         log.info("Minimum LOD: {}", minLod);
         log.info("Maximum LOD: {}", maxLod);
         log.info("Minimum GeometricError: {}", minGeometricError);
@@ -433,7 +540,6 @@ public class GlobalOptions {
         Mago3DTilerMain.drawLine();
         log.info("Mesh Quantization: {}", useQuantization);
         log.info("Rotate X-Axis: {}", rotateX);
-        log.info("RefineAdd: {}", refineAdd);
         log.info("Flip Coordinate: {}", flipCoordinate);
         log.info("Ignore Textures: {}", ignoreTextures);
         log.info("Max Triangles: {}", maxTriangles);
@@ -455,5 +561,4 @@ public class GlobalOptions {
         log.info("Skirt Height: {}", skirtHeight);
         Mago3DTilerMain.drawLine();
     }
-
 }

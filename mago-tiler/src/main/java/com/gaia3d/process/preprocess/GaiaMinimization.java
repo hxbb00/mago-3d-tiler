@@ -1,15 +1,16 @@
 package com.gaia3d.process.preprocess;
 
 import com.gaia3d.basic.exchangable.GaiaSet;
-import com.gaia3d.basic.model.GaiaAttribute;
 import com.gaia3d.basic.model.GaiaScene;
-import com.gaia3d.basic.pointcloud.GaiaPointCloud;
+import com.gaia3d.command.mago.GlobalOptions;
+import com.gaia3d.basic.types.LevelOfDetail;
 import com.gaia3d.process.tileprocess.tile.TileInfo;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.File;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @AllArgsConstructor
@@ -17,6 +18,7 @@ import java.nio.file.Path;
  * Save only the essential information of the object as a file.
  */
 public class GaiaMinimization implements PreProcess {
+    private final List<LevelOfDetail> lodList = new ArrayList<>();
 
     @Override
     public TileInfo run(TileInfo tileInfo) {
@@ -28,27 +30,23 @@ public class GaiaMinimization implements PreProcess {
     private void minimizeGaiaScene(TileInfo tileInfo, GaiaScene scene) {
         if (scene != null) {
             GaiaSet tempSet = GaiaSet.fromGaiaScene(scene);
-            Path tempPath = tempSet.writeFile(tileInfo.getTempPath(), tileInfo.getSerial(), tempSet.getAttribute());
+
+            if (lodList.isEmpty()) {
+                GlobalOptions globalOptions = GlobalOptions.getInstance();
+                int minimumLod = globalOptions.getMinLod();
+                int maximumLod = globalOptions.getMaxLod();
+                for (int index = minimumLod; index <= maximumLod; index++) {
+                    LevelOfDetail lod = LevelOfDetail.getByLevel(index);
+                    lodList.add(lod);
+                }
+            }
+
+            Path tempPath = tempSet.writeFileWithLod(tileInfo.getTempPath(), tileInfo.getSerial(), lodList);
             tileInfo.setTempPath(tempPath);
             tempSet.clear();
             tempSet = null;
             scene.clear();
             scene = null;
-        }
-    }
-
-    private void minimizeGaiaPointCloud(TileInfo tileInfo, GaiaPointCloud pointCloud) {
-        if (pointCloud != null) {
-            //Path tempPath = tempSet.writeFile(tileInfo.getTempPath(), tileInfo.getSerial(), tempSet.getAttribute());
-            tileInfo.setTempPath(tileInfo.getOutputPath().resolve("temp"));
-
-            GaiaAttribute attribute = pointCloud.getGaiaAttribute();
-            String id = attribute.getIdentifier().toString();
-
-            File tempFile = new File(tileInfo.getTempPath().toString(), id);
-            pointCloud.minimize(tempFile);
-
-            log.info("Minimized point cloud: {}", tempFile.getAbsolutePath());
         }
     }
 }

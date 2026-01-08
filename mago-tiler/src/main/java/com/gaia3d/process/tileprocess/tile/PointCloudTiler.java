@@ -5,8 +5,10 @@ import com.fasterxml.jackson.core.json.JsonWriteFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaia3d.basic.exception.TileProcessingException;
 import com.gaia3d.basic.geometry.GaiaBoundingBox;
-import com.gaia3d.basic.pointcloud.GaiaPointCloud;
+import com.gaia3d.basic.types.LevelOfDetail;
 import com.gaia3d.command.mago.GlobalOptions;
+import com.gaia3d.converter.pointcloud.GaiaLasPoint;
+import com.gaia3d.converter.pointcloud.GaiaPointCloud;
 import com.gaia3d.process.tileprocess.Tiler;
 import com.gaia3d.process.tileprocess.tile.tileset.Tileset;
 import com.gaia3d.process.tileprocess.tile.tileset.TilesetV2;
@@ -20,9 +22,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.joml.Matrix4d;
 import org.joml.Vector3d;
-import org.locationtech.proj4j.BasicCoordinateTransform;
-import org.locationtech.proj4j.CoordinateReferenceSystem;
-import org.locationtech.proj4j.ProjCoordinate;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -31,55 +30,32 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
 public class PointCloudTiler extends DefaultTiler implements Tiler {
-
-    private double rootGeometricError = 0.0d;
-    private final int MAXIMUM_DEPTH = 12;
+    private final int MAXIMUM_DEPTH = 20;
+    private final float POINT_EXPANSION_FACTOR = 3.0f;
+    private GaiaBoundingBox globalFitBoundingBox = null;
 
     @Override
     public Tileset run(List<TileInfo> tileInfos) {
         GlobalOptions globalOptions = GlobalOptions.getInstance();
         GaiaBoundingBox globalBoundingBox = calcCartographicBoundingBox(tileInfos);
-
-        CoordinateReferenceSystem source = globalOptions.getSourceCrs();
-        Vector3d originalMinPosition = globalBoundingBox.getMinPosition();
-        Vector3d originalMaxPosition = globalBoundingBox.getMaxPosition();
-
-        BasicCoordinateTransform transformer = new BasicCoordinateTransform(source, GlobeUtils.wgs84);
-        ProjCoordinate transformedMinCoordinate = transformer.transform(new ProjCoordinate(originalMinPosition.x, originalMinPosition.y, originalMinPosition.z), new ProjCoordinate());
-        Vector3d minPosition = new Vector3d(transformedMinCoordinate.x, transformedMinCoordinate.y, originalMinPosition.z);
-        ProjCoordinate transformedMaxCoordinate = transformer.transform(new ProjCoordinate(originalMaxPosition.x, originalMaxPosition.y, originalMaxPosition.z), new ProjCoordinate());
-        Vector3d maxPosition = new Vector3d(transformedMaxCoordinate.x, transformedMaxCoordinate.y, originalMaxPosition.z);
-
-        GaiaBoundingBox transformedBoundingBox = new GaiaBoundingBox();
-        transformedBoundingBox.addPoint(minPosition);
-        transformedBoundingBox.addPoint(maxPosition);
-
+        globalFitBoundingBox = globalBoundingBox;
+        GaiaBoundingBox cubeGlobalBoundingBox = toCube(globalBoundingBox);
         Matrix4d transformMatrix = getTransformMatrixFromCartographic(globalBoundingBox);
         rotateX90(transformMatrix);
 
-        double geometricError = calcGeometricErrorFromWgs84(transformedBoundingBox);
-        double minimumGeometricError = 64.0;
-        double maximumGeometricError = 1000.0;
-        if (geometricError < minimumGeometricError) {
-            geometricError = minimumGeometricError;
-        } else if (geometricError > maximumGeometricError) {
-            geometricError = maximumGeometricError;
-        }
-        rootGeometricError = geometricError;
+        double geographicError = calcGeometricErrorFromDegreeBoundingBox(cubeGlobalBoundingBox) / 2;
+        log.info("[Tile][Tileset] Global Geographic Geometric Error: {}", geographicError);
 
         Node root = createRoot();
         root.setNodeCode("R");
-        root.setBoundingBox(transformedBoundingBox);
+        root.setBoundingBox(cubeGlobalBoundingBox);
         root.setRefine(Node.RefineType.ADD);
-        root.setGeometricError(geometricError);
-
-        BoundingVolume boundingVolume = new BoundingVolume(transformedBoundingBox, BoundingVolume.BoundingVolumeType.REGION);
+        root.setGeometricError(geographicError);
+        BoundingVolume boundingVolume = new BoundingVolume(globalBoundingBox, BoundingVolume.BoundingVolumeType.REGION);
 
         // root만 큐브로
         root.setBoundingVolume(boundingVolume);
@@ -101,7 +77,7 @@ public class PointCloudTiler extends DefaultTiler implements Tiler {
             AssetV2 asset = new AssetV2();
             tileset.setAsset(asset);
         }
-        tileset.setGeometricError(geometricError);
+        tileset.setGeometricError(geographicError);
         tileset.setRoot(root);
         return tileset;
     }
@@ -143,23 +119,34 @@ public class PointCloudTiler extends DefaultTiler implements Tiler {
         }
     }
 
-    private double calcGeometricError(GaiaBoundingBox boundingBox) {
-        return boundingBox.getLongestDistance();
+    private double calcChildrenGeometricError(GaiaBoundingBox boundingBox, int pointLimit) {
+        double geographicError = calcGeometricErrorFromDegreeBoundingBox(boundingBox) / 2;
+        double pointsFactor = pointLimit < 1000 ? 1 : ((double) 1000 / pointLimit);
+        if (pointsFactor > 1.0) {
+            pointsFactor = 1.0;
+        } else if (pointsFactor < 0.01) {
+            pointsFactor = 0.01;
+        }
+        double calculatedGeometricError = geographicError * pointsFactor;
+
+        if (calculatedGeometricError < 0.01) {
+            calculatedGeometricError = 0.01;
+        } else if (calculatedGeometricError < 0.1) {
+            calculatedGeometricError = 0.1;
+        } else if (calculatedGeometricError > 0.5 && geographicError < 1.0) {
+            calculatedGeometricError = 1.0;
+        }
+        return calculatedGeometricError;
     }
 
-    // convert to meters
-    private double calcGeometricErrorFromWgs84(GaiaBoundingBox boundingBox) {
+    private double calcGeometricErrorFromDegreeBoundingBox(GaiaBoundingBox boundingBox) {
         Vector3d minPosition = boundingBox.getMinPosition();
         Vector3d maxPosition = boundingBox.getMaxPosition();
-
-        Vector3d minTransformed = GlobeUtils.geographicToCartesianWgs84(minPosition);
-        Vector3d maxTransformed = GlobeUtils.geographicToCartesianWgs84(maxPosition);
-        return minTransformed.distance(maxTransformed);
-    }
-
-    private double calcGeometricError(GaiaPointCloud pointCloud) {
-        GaiaBoundingBox boundingBox = pointCloud.getGaiaBoundingBox();
-        return boundingBox.getLongestDistance();
+        double[] minLatLon = new double[]{minPosition.x, minPosition.y};
+        double[] maxLatLon = new double[]{maxPosition.x, maxPosition.y};
+        double[] distanced = GlobeUtils.distanceBetweenDegrees(minLatLon, maxLatLon);
+        double verticalDistance = Math.abs(maxPosition.z - minPosition.z);
+        return Math.sqrt(distanced[0] * distanced[0] + distanced[1] * distanced[1] + verticalDistance * verticalDistance);
     }
 
     @Override
@@ -180,102 +167,287 @@ public class PointCloudTiler extends DefaultTiler implements Tiler {
         return boundingBox;
     }
 
+    // Invariant: sum of point counts must always equal original point count
     private void createRootNode(Node parentNode, List<TileInfo> tileInfos) throws IOException {
         GlobalOptions globalOptions = GlobalOptions.getInstance();
         List<GaiaPointCloud> pointClouds = tileInfos.stream()
                 .map(TileInfo::getPointCloud)
-                .collect(Collectors.toList());
+                .toList();
         int index = 0;
         int maximumIndex = pointClouds.size();
-        int rootPointLimit = globalOptions.getMaximumPointPerTile() / 16;
+        int rootPointLimit = globalOptions.getMaximumPointPerTile() / 32;
         for (GaiaPointCloud pointCloud : pointClouds) {
+            GaiaBoundingBox box = pointCloud.getGaiaBoundingBox();
+            box = toCube(box);
+            pointCloud.setGaiaBoundingBox(box);
+
+            log.info("[Tile][{}/{}] original Point Count : {}", (index + 1), maximumIndex, pointCloud.getPointCount());
             pointCloud.setCode((index++) + "");
-            pointCloud.maximize();
-            List<GaiaPointCloud> allPointClouds = new ArrayList<>();
-            createNode(allPointClouds, index, maximumIndex, parentNode, pointCloud, rootPointLimit, 0);
-            minimizeAllPointCloud(index, maximumIndex, allPointClouds);
+            long chunkSize = pointCloud.CHUNK_SIZE;
+            long chunkPointCount = chunkSize / GaiaLasPoint.BYTES_SIZE;
+            int chunkCount = pointCloud.getChunkCount(chunkSize);
+            log.info("[Tile][{}/{}] Chunk Size : {} bytes, Chunk Capacity : {}, Chunk Total Count : {}", index, maximumIndex, chunkSize, chunkPointCount, chunkCount);
+            long offset = 0;
+
+            GaiaPointCloud rootTile = null;
+            for (int i = 0; i < chunkCount; i++) {
+                log.info("[Tile][{}/{}][Chunk {}/{}] Reading Chunk at Offset : {}", index, maximumIndex, (i + 1), chunkCount, offset);
+                GaiaPointCloud chunk = pointCloud.readChunk(chunkSize, offset);
+                offset += chunkSize;
+
+                if (rootTile == null) {
+                    log.info("[Tile][{}/{}][Chunk {}/{}] Creating Root Node", index, maximumIndex, (i + 1), chunkCount);
+                    rootTile = createNode(index, parentNode, null, chunk, rootPointLimit, 0);
+                } else {
+                    Node firstChildNode = parentNode.getChildren().getLast();
+                    log.info("[Tile][{}/{}][Chunk {}/{}] Expanding Root Node", index, maximumIndex, (i + 1), chunkCount);
+                    expandNode(index, firstChildNode, rootTile, chunk, rootPointLimit, 0);
+                }
+
+                //log.info("[Tile][{}/{}][{}/{}][Chunk {}/{}]", index, maximumIndex, index, maximumIndex, (i + 1), chunkCount);
+                //printDebugAllNodeCount(rootTile, "", 0);
+                List<GaiaPointCloud> childrenPointClouds = rootTile.getAllLeaves();
+                minimizeAllPointCloud(index, maximumIndex, childrenPointClouds);
+                chunk.clearPoints();
+            }
+
+            long rootAllPointCount = rootTile.getAllPointCount();
+            if (rootAllPointCount != pointCloud.getAllPointCount()) {
+                throw new TileProcessingException("Point count mismatch after processing root node.");
+            }
+
+            log.info("[Tile][{}/{}] completed.", index, maximumIndex);
+            pointCloud.clearPoints();
+            pointCloud.removeMinimizedFile();
         }
     }
 
-    private void createNode(List<GaiaPointCloud> allPointClouds, int index, int maximumIndex, Node parentNode, GaiaPointCloud pointCloud, int pointLimit, int depth) {
+    private void printDebugAllNodeCount(GaiaPointCloud pointCloud, String prefix, int depth) {
+        if (pointCloud == null) {
+            log.info("[Debug][{}] Total Processed Node Count: 0", depth);
+            return;
+        }
+
+        long rootAllPointCount = pointCloud.getAllPointCount();
+        int maximumDepth = pointCloud.getMaxDepth();
+        int nodeCount = pointCloud.getNodeCount();
+        String indent = "-".repeat(depth);
+        String childPrefix = prefix + pointCloud.getCode();
+        log.info("[Debug][{}] {} Created All Point Count : {}, Max Depth : {}, Node Count : {}, Self Points : {}", childPrefix, indent, rootAllPointCount, maximumDepth, nodeCount, pointCloud.getPointCount());
+
+        long totalChildPoints = 0;
+        for (GaiaPointCloud child : pointCloud.getChildren()) {
+            printDebugAllNodeCount(child, childPrefix, depth + 1);
+            totalChildPoints += child.getAllPointCount();
+        }
+        if (totalChildPoints != pointCloud.getAllPointCount() - pointCloud.getPointCount()) {
+            log.error("[Debug][{}] {} Point Count Mismatch: Parent All Point Count: {}, Sum of Child All Point Counts: {}", childPrefix, indent, pointCloud.getAllPointCount(), totalChildPoints);
+        }
+    }
+
+    private void expandNode(int index, Node parentNode, GaiaPointCloud parent, GaiaPointCloud target, int pointLimit, int depth) {
         GlobalOptions globalOptions = GlobalOptions.getInstance();
 
-        allPointClouds.add(pointCloud);
-        int vertexLength = pointCloud.getVertices().size();
-        List<GaiaPointCloud> divided = pointCloud.divideChunkSize(pointLimit);
-        GaiaPointCloud selfPointCloud = divided.get(0);
-        allPointClouds.add(selfPointCloud);
-        GaiaPointCloud remainPointCloud = divided.get(1);
+        Node currentNode = parentNode.getChildren().stream().filter(node -> node.getNodeCode().equals(parentNode.getNodeCode() + target.getCode()))
+                .findFirst()
+                .orElse(null);
+        GaiaPointCloud currentPointCloud = parent.getChildren().stream()
+                .filter(child -> child.getCode().equals(target.getCode()))
+                .findFirst()
+                .orElse(null);
 
-        GaiaBoundingBox childBoundingBox = selfPointCloud.getGaiaBoundingBox();
-        Vector3d originalMinPosition = childBoundingBox.getMinPosition();
-        Vector3d originalMaxPosition = childBoundingBox.getMaxPosition();
+        if (parent.getCode().equals("R") && target.getCode().equals("R")) {
+            currentNode = parentNode;
+            currentPointCloud = parent;
+            GaiaBoundingBox cubeBoundingBox = target.getGaiaBoundingBox();
+            target.setGaiaBoundingBox(cubeBoundingBox);
+            List<GaiaPointCloud> distributes = target.distribute();
 
-        CoordinateReferenceSystem source = globalOptions.getSourceCrs();
-        BasicCoordinateTransform transformer = new BasicCoordinateTransform(source, GlobeUtils.wgs84);
-        ProjCoordinate transformedMinCoordinate = transformer.transform(new ProjCoordinate(originalMinPosition.x, originalMinPosition.y, originalMinPosition.z), new ProjCoordinate());
-        Vector3d minPosition = new Vector3d(transformedMinCoordinate.x, transformedMinCoordinate.y, originalMinPosition.z);
-        ProjCoordinate transformedMaxCoordinate = transformer.transform(new ProjCoordinate(originalMaxPosition.x, originalMaxPosition.y, originalMaxPosition.z), new ProjCoordinate());
-        Vector3d maxPosition = new Vector3d(transformedMaxCoordinate.x, transformedMaxCoordinate.y, originalMaxPosition.z);
+            for (GaiaPointCloud distribute : distributes) {
+                if (distribute.getPointCount() < 1) {
+                    continue;
+                }
 
-        GaiaBoundingBox transformedBoundingBox = new GaiaBoundingBox();
-        transformedBoundingBox.addPoint(minPosition);
-        transformedBoundingBox.addPoint(maxPosition);
+                int newPointLimit = (int) (pointLimit * POINT_EXPANSION_FACTOR);
+                if (newPointLimit > globalOptions.getMaximumPointPerTile()) {
+                    newPointLimit = globalOptions.getMaximumPointPerTile();
+                }
 
-        Matrix4d transformMatrix = getTransformMatrixFromCartographic(childBoundingBox);
+                int newDepth = depth + 1;
+                if (newDepth < MAXIMUM_DEPTH) {
+                    expandNode(index, currentNode, currentPointCloud, distribute, newPointLimit, newDepth);
+                } else {
+                    log.warn("[warn] Maximum depth reached when expanding node: {}", currentNode.getNodeCode());
+                }
+            }
+            return;
+        }
+
+        if ((currentNode == null) != (currentPointCloud == null)) {
+            throw new TileProcessingException("Node or PointCloud with the same code already exists: " + target.getCode());
+        }
+
+        boolean hasMatchedNodeAndPointCloud = currentNode != null;
+        if (hasMatchedNodeAndPointCloud) {
+            GaiaBoundingBox cubeBoundingBox = currentPointCloud.getGaiaBoundingBox();
+            GaiaBoundingBox fitBoundingBox = calcFitBoundingBox(cubeBoundingBox);
+            double dimensionRatio = calcDimensionRatio(fitBoundingBox, cubeBoundingBox);
+            int chunkPointLimit = (int) (pointLimit * dimensionRatio);
+            if (chunkPointLimit < 1) {
+                chunkPointLimit = 1;
+            }
+
+            List<GaiaPointCloud> divided;
+            long remainPointCount = currentPointCloud.getLimitPointCount() - currentPointCloud.getPointCount();
+            GaiaPointCloud remainPointCloud = null;
+            if (remainPointCount > 0) {
+                divided = target.divideChunkSize((int) remainPointCount);
+                if (currentPointCloud.getLasPoints() == null || currentPointCloud.getLasPoints().isEmpty()) {
+                    currentPointCloud.maximize(true);
+                }
+                long currentPointCount = currentPointCloud.getPointCount();
+
+                GaiaPointCloud newSelfPointCloud = divided.getFirst();
+                currentPointCloud.combine(newSelfPointCloud);
+
+                if (currentPointCount + newSelfPointCloud.getPointCount() != currentPointCloud.getPointCount()) {
+                    throw new TileProcessingException("Point count mismatch after combining point clouds.");
+                }
+
+                String tempSubPath = currentPointCloud.createFullCodePath();
+                File tempPath = new File(GlobalOptions.getInstance().getTempPath(), tempSubPath);
+                if (!tempPath.exists()) {
+                    boolean created = tempPath.mkdirs();
+                    if (!created) {
+                        log.error("[ERROR] :Failed to create temp directory: {}", tempPath.getAbsolutePath());
+                        throw new TileProcessingException("Failed to create temp directory: " + tempPath.getAbsolutePath());
+                    }
+                }
+                File tempFile = new File(tempPath, UUID.randomUUID().toString());
+                currentPointCloud.minimize(tempFile);
+                remainPointCloud = divided.getLast();
+            } else {
+                remainPointCloud = target;
+            }
+
+            if (remainPointCloud != null && remainPointCloud.getPointCount() > 0) {
+                List<GaiaPointCloud> distributes = remainPointCloud.distribute();
+
+                long totalDistributedPoints = distributes.stream()
+                        .mapToLong(GaiaPointCloud::getPointCount)
+                        .sum();
+                if (totalDistributedPoints != remainPointCloud.getPointCount()) {
+                    throw new TileProcessingException("Point count mismatch after distributing point cloud.");
+                }
+
+                for (GaiaPointCloud distribute : distributes) {
+                    if (distribute.getPointCount() < 1) {
+                        continue;
+                    }
+
+                    int newPointLimit = (int) (pointLimit * POINT_EXPANSION_FACTOR);
+                    if (newPointLimit > globalOptions.getMaximumPointPerTile()) {
+                        newPointLimit = globalOptions.getMaximumPointPerTile();
+                    }
+
+                    int newDepth = depth + 1;
+                    if (newDepth < MAXIMUM_DEPTH) {
+                        expandNode(index, currentNode, currentPointCloud, distribute, newPointLimit, newDepth);
+                    } else {
+                        log.warn("[warn] Maximum depth reached when expanding node: {}", currentNode.getNodeCode());
+                    }
+                }
+            }
+        } else {
+            createNode(index, parentNode, parent, target, pointLimit, depth);
+        }
+    }
+
+    private GaiaPointCloud createNode(int index, Node parentNode, GaiaPointCloud parent, GaiaPointCloud pointCloud, int pointLimit, int depth) {
+        GlobalOptions globalOptions = GlobalOptions.getInstance();
+        GaiaBoundingBox cubeBoundingBox = pointCloud.getGaiaBoundingBox();
+        //GaiaBoundingBox fitBoundingBox = calcFitBoundingBox(pointCloud);
+        GaiaBoundingBox fitBoundingBox = calcFitBoundingBox(cubeBoundingBox);
+        double dimensionRatio = calcDimensionRatio(fitBoundingBox, cubeBoundingBox);
+        int chunkPointLimit = (int) (pointLimit * dimensionRatio);
+        if (chunkPointLimit < 1) {
+            chunkPointLimit = 1;
+        }
+
+        pointCloud.setLimitPointCount(chunkPointLimit);
+        List<GaiaPointCloud> divided = pointCloud.divideChunkSize(chunkPointLimit);
+        GaiaPointCloud selfPointCloud = divided.getFirst();
+        selfPointCloud.setParent(parent);
+        if (parent != null) {
+            parent.addChild(selfPointCloud);
+        }
+
+        Matrix4d transformMatrix = getTransformMatrixFromCartographic(fitBoundingBox);
         rotateX90(transformMatrix);
-        BoundingVolume boundingVolume = new BoundingVolume(transformedBoundingBox, BoundingVolume.BoundingVolumeType.REGION);
+        double calculatedGeometricError = calcChildrenGeometricError(cubeBoundingBox, pointLimit);
+        Node childNode = createChildNode(index, parent, parentNode, transformMatrix, selfPointCloud, cubeBoundingBox, fitBoundingBox, calculatedGeometricError);
+        parentNode.getChildren().add(childNode);
 
-        int attenuation;
-        if (depth < 2) {
-            attenuation = 48;
-        } else if (depth < 3) {
-            attenuation = 64;
-        } else if (depth < 4) {
-            attenuation = 80;
-        } else if (depth < 5) {
-            attenuation = 96;
-        } else {
-            attenuation = 128;
+        if (divided.getFirst().getPointCount() + divided.getLast().getPointCount() != pointCloud.getPointCount()) {
+            throw new TileProcessingException("Point count mismatch after dividing point cloud.");
         }
 
-        double calcValue = (1000 / rootGeometricError) * attenuation;
-        double maximumGeometricError = 36.0;
-        double geometricErrorCalc = calcGeometricErrorFromWgs84(transformedBoundingBox);
-        double calculatedGeometricError = geometricErrorCalc / calcValue;
-        if (calculatedGeometricError > maximumGeometricError) {
-            calculatedGeometricError = maximumGeometricError;
-        } else {
-            calculatedGeometricError = Math.floor(calculatedGeometricError);
-        }
+        GaiaPointCloud remainPointCloud = divided.getLast();
+        if (remainPointCloud.getPointCount() > 0) {
+            List<GaiaPointCloud> distributes = remainPointCloud.distribute();
 
-        if (geometricErrorCalc < 25 && calculatedGeometricError < 0.1) {
-            calculatedGeometricError = 0.1;
-        } else if (calculatedGeometricError < 1.0) {
-            calculatedGeometricError = 1.0;
+            for (GaiaPointCloud distribute : distributes) {
+                if (distribute.getPointCount() < 1) {
+                    continue;
+                }
+
+                int newPointLimit = (int) (pointLimit * 2.0f);
+                if (newPointLimit > globalOptions.getMaximumPointPerTile()) {
+                    newPointLimit = globalOptions.getMaximumPointPerTile();
+                }
+
+                int newDepth = depth + 1;
+                if (newDepth < MAXIMUM_DEPTH) {
+                    createNode(index, childNode, selfPointCloud, distribute, newPointLimit, newDepth);
+                } else {
+                    log.warn("[warn] Maximum depth reached when expanding node: {}", childNode.getNodeCode());
+                }
+            }
         }
+        return selfPointCloud;
+    }
+
+    private Node createChildNode(int index, GaiaPointCloud parent, Node parentNode, Matrix4d transformMatrix, GaiaPointCloud pointCloud, GaiaBoundingBox cubeBoundingBox, GaiaBoundingBox fitBoundingBox, double calculatedGeometricError) {
+        GlobalOptions globalOptions = GlobalOptions.getInstance();
+        BoundingVolume boundingVolume = new BoundingVolume(fitBoundingBox, BoundingVolume.BoundingVolumeType.REGION);
 
         Node childNode = new Node();
         childNode.setParent(parentNode);
         childNode.setTransformMatrix(transformMatrix, globalOptions.isClassicTransformMatrix());
-        childNode.setBoundingBox(childBoundingBox);
+        childNode.setBoundingBox(cubeBoundingBox);
         childNode.setBoundingVolume(boundingVolume);
         childNode.setRefine(Node.RefineType.ADD);
         childNode.setChildren(new ArrayList<>());
+        if (parentNode == null) {
+            throw new TileProcessingException("Parent node is null when creating child node.");
+        }
         childNode.setNodeCode(parentNode.getNodeCode() + pointCloud.getCode());
+        if (parent == null) {
+            childNode.setNodeCode(childNode.getNodeCode() + index);
+        }
         childNode.setGeometricError(calculatedGeometricError);
 
         TileInfo selfTileInfo = TileInfo.builder()
-                .pointCloud(selfPointCloud)
-                .boundingBox(childBoundingBox)
+                .pointCloud(pointCloud)
+                .boundingBox(cubeBoundingBox)
                 .build();
         List<TileInfo> tileInfos = new ArrayList<>();
         tileInfos.add(selfTileInfo);
 
         ContentInfo contentInfo = new ContentInfo();
-        contentInfo.setName("points-cloud" + childNode.getNodeCode());
+        contentInfo.setName("P" + childNode.getNodeCode());
         contentInfo.setLod(LevelOfDetail.LOD0);
-        contentInfo.setBoundingBox(childBoundingBox);
+        contentInfo.setBoundingBox(cubeBoundingBox);
         contentInfo.setNodeCode(childNode.getNodeCode());
         contentInfo.setTileInfos(tileInfos);
 
@@ -286,51 +458,100 @@ public class PointCloudTiler extends DefaultTiler implements Tiler {
             content.setUri("data/" + childNode.getNodeCode() + ".glb");
         }
         content.setContentInfo(contentInfo);
-        childNode.setContent(content);
 
-        parentNode.getChildren().add(childNode);
-        log.info("[Tile][{}/{}][ContentNode][{}]", index, maximumIndex, childNode.getNodeCode());
-
-        if (vertexLength > 0) {
-            List<GaiaPointCloud> distributes = remainPointCloud.distribute();
-            distributes.forEach(distribute -> {
-                if (!distribute.getVertices().isEmpty()) {
-                    int newPointLimit = (int) (pointLimit * 1.75d); // (/3)
-                    if (newPointLimit > globalOptions.getMaximumPointPerTile()) {
-                        newPointLimit = globalOptions.getMaximumPointPerTile();
-                    }
-
-                    int newDepth = depth + 1;
-                    if (newDepth < MAXIMUM_DEPTH) {
-                        createNode(allPointClouds, index, maximumIndex, childNode, distribute, newPointLimit, newDepth);
-                    } else {
-                        log.info("[Tile][{}/{}][DepthLimit][{}]", index, maximumIndex, newDepth);
-                    }
-                }
-            });
+        if (pointCloud.getPointCount() < 1) {
+            log.debug("[warn] PointCloud point count is less than 1 for node: {}", childNode.getNodeCode());
+        } else {
+            childNode.setContent(content);
         }
+
+        return childNode;
+    }
+
+    private double calcDimensionRatio(GaiaBoundingBox fitBoundingBox, GaiaBoundingBox cubeBoundingBox) {
+        Vector3d fitVolumeSize = fitBoundingBox.getSize();
+        if (fitVolumeSize.x == 0 && fitVolumeSize.y == 0 && fitVolumeSize.z == 0) {
+            fitVolumeSize = new Vector3d(1, 1, 1);
+        }
+        Vector3d cubeVolumeSize = cubeBoundingBox.getSize();
+        return (fitVolumeSize.x * fitVolumeSize.y) / (cubeVolumeSize.x * cubeVolumeSize.y);
+    }
+
+    /*private GaiaBoundingBox calcRealFitBoundingBox(GaiaPointCloud pointCloud) {
+        GaiaBoundingBox fitBoundingBox = new GaiaBoundingBox();
+        pointCloud.getLasPoints().forEach(point -> {
+            fitBoundingBox.addPoint(point.getPosition());
+        });
+        return fitBoundingBox;
+    }*/
+
+    private GaiaBoundingBox calcFitBoundingBox(GaiaBoundingBox cubeBoundingBox) {
+        return globalFitBoundingBox.createIntersection(cubeBoundingBox);
+    }
+
+    private static GaiaBoundingBox toCube(GaiaBoundingBox box) {
+        // degree with height
+        Vector3d min = box.getMinPosition();
+        Vector3d max = box.getMaxPosition();
+        Vector3d center = box.getFloorCenter();
+
+        // degree -> world coordinate
+        Vector3d minPosition = GlobeUtils.geographicToCartesianWgs84(min);
+        Vector3d maxPosition = GlobeUtils.geographicToCartesianWgs84(max);
+        Vector3d centerCartesian = GlobeUtils.geographicToCartesianWgs84(center);
+        Matrix4d transformMatrix = GlobeUtils.transformMatrixAtCartesianPointWgs84(centerCartesian);
+        Matrix4d transformMatrixInv = new Matrix4d(transformMatrix).invert();
+
+        minPosition = transformMatrixInv.transformPosition(minPosition, new Vector3d());
+        maxPosition = transformMatrixInv.transformPosition(maxPosition, new Vector3d());
+
+        double deltaX = Math.abs(maxPosition.x - minPosition.x);
+        double deltaY = Math.abs(maxPosition.y - minPosition.y);
+        double deltaZ = Math.abs(maxPosition.z - minPosition.z);
+
+        double maxDelta = Math.max(deltaX, Math.max(deltaY, deltaZ));
+        double halfSize = maxDelta / 2.0;
+
+        double xOffset = maxDelta - deltaX;
+        double yOffset = maxDelta - deltaY;
+        double zOffset = maxDelta - deltaZ;
+
+        Vector3d newMin = new Vector3d(minPosition.x, minPosition.y, minPosition.z);
+        Vector3d newMax = new Vector3d(maxPosition.x + xOffset, maxPosition.y + yOffset, maxPosition.z + zOffset);
+
+        box = new GaiaBoundingBox();
+        // world coordinate -> degree
+        Vector3d transformedMin = transformMatrix.transformPosition(newMin);
+        Vector3d transformedMax = transformMatrix.transformPosition(newMax);
+
+        Vector3d cubeLonLatMin = GlobeUtils.cartesianToGeographicWgs84(transformedMin);
+        Vector3d cubeLonLatMax = GlobeUtils.cartesianToGeographicWgs84(transformedMax);
+
+        box.addPoint(cubeLonLatMin);
+        box.addPoint(cubeLonLatMax);
+
+        return box;
     }
 
     private void minimizeAllPointCloud(int index, int maximumIndex, List<GaiaPointCloud> allPointClouds) {
         int size = allPointClouds.size();
-        AtomicInteger atomicInteger = new AtomicInteger(1);
-        printJvmMemory();
+
+        long totalPoints = allPointClouds.stream()
+                .mapToLong(GaiaPointCloud::getPointCount)
+                .sum();
+        log.debug("[Tile][{}/{}][Minimize][TotalPointClouds:{}][TotalPoints:{}]", index, maximumIndex, size, totalPoints);
         allPointClouds.forEach(pointCloud -> {
-            File tempPath = new File(GlobalOptions.getInstance().getOutputPath(), "temp");
+            String tempSubPath = pointCloud.createFullCodePath();
+            File tempPath = new File(GlobalOptions.getInstance().getTempPath(), tempSubPath);
+            if (!tempPath.exists()) {
+                boolean created = tempPath.mkdirs();
+                if (!created) {
+                    log.error("[ERROR] :Failed to create temp directory: {}", tempPath.getAbsolutePath());
+                    throw new TileProcessingException("Failed to create temp directory: " + tempPath.getAbsolutePath());
+                }
+            }
             File tempFile = new File(tempPath, UUID.randomUUID().toString());
             pointCloud.minimize(tempFile);
-            log.info("[Tile][{}/{}][Minimize][{}/{}] Write temp file : {}", index, maximumIndex, atomicInteger.getAndIncrement(), size, tempFile.getName());
         });
-    }
-
-    private void printJvmMemory() {
-        String javaHeapSize = System.getProperty("java.vm.name") + " " + Runtime.getRuntime().maxMemory() / 1024 / 1024 + "MB";
-        long maxMem = Runtime.getRuntime().maxMemory() / 1024 / 1024;
-        long totalMem = Runtime.getRuntime().totalMemory() / 1024 / 1024;
-        long freeMem = Runtime.getRuntime().freeMemory() / 1024 / 1024;
-        long usedMem = totalMem - freeMem;
-        // 퍼센트
-        double pct = usedMem * 100.0 / maxMem;
-        log.info("[Tile] Java Heap Size: {} / MaxMem: {}MB / TotalMem: {}MB / FreeMem: {}MB / UsedMem: {}MB / Pct: {}%", javaHeapSize, maxMem, totalMem, freeMem, usedMem, pct);
     }
 }

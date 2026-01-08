@@ -18,9 +18,10 @@ public class Mago3DTilerMain {
 
     public static void main(String[] args) {
         try {
-            Options options = LoggingConfiguration.createOptions();
-            CommandLineParser parser = new DefaultParser();
-            CommandLine command = parser.parse(options, args);
+            GlobalOptions globalOptions = GlobalOptions.getInstance();
+            CommandLineConfiguration commandLine = globalOptions.getCommandLineConfiguration();
+            Options options = commandLine.createOptions();
+            CommandLine command = commandLine.createCommandLine(options, args);
 
             boolean isHelp = command.hasOption(ProcessOptions.HELP.getLongName());
             boolean isQuiet = command.hasOption(ProcessOptions.QUIET.getLongName());
@@ -66,7 +67,7 @@ public class Mago3DTilerMain {
                 mago3DTiler.execute();
             }
 
-            GlobalOptions globalOptions = GlobalOptions.getInstance();
+
         } catch (ParseException e) {
             log.error("[ERROR] Failed to parse command line options, Please check the arguments.", e);
             throw new RuntimeException("Failed to parse command line options, Please check the arguments.", e);
@@ -101,6 +102,7 @@ public class Mago3DTilerMain {
         log.info("[Process Summary]");
         log.info("Total tile contents count : {}", globalOptions.getTileCount());
         log.info("Total tileset.json File Size : {}", DecimalUtils.byteCountToDisplaySize(globalOptions.getTilesetSize()));
+        log.info("Total process time : {} sec", DecimalUtils.millisecondToDisplayTime(globalOptions.getProcessTimeMillis()));
         drawLine();
     }
 

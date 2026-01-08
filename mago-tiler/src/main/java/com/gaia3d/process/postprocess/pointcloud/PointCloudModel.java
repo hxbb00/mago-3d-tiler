@@ -4,9 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.json.JsonWriteFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaia3d.basic.geometry.GaiaBoundingBox;
-import com.gaia3d.basic.model.GaiaVertex;
-import com.gaia3d.basic.pointcloud.GaiaPointCloud;
 import com.gaia3d.command.mago.GlobalOptions;
+import com.gaia3d.converter.pointcloud.GaiaLasPoint;
+import com.gaia3d.converter.pointcloud.GaiaPointCloud;
 import com.gaia3d.process.postprocess.ComponentType;
 import com.gaia3d.process.postprocess.ContentModel;
 import com.gaia3d.process.postprocess.DataType;
@@ -23,13 +23,13 @@ import org.joml.Matrix4d;
 import org.joml.Vector3d;
 import org.locationtech.proj4j.BasicCoordinateTransform;
 import org.locationtech.proj4j.CoordinateReferenceSystem;
-import org.locationtech.proj4j.InvalidValueException;
 import org.locationtech.proj4j.ProjCoordinate;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -49,10 +49,10 @@ public class PointCloudModel implements ContentModel {
         List<TileInfo> tileInfos = contentInfo.getTileInfos();
 
         GaiaBoundingBox boundingBox = new GaiaBoundingBox();
-        AtomicInteger vertexCount = new AtomicInteger();
+        AtomicLong vertexCount = new AtomicLong();
         tileInfos.forEach((tileInfo) -> {
             GaiaPointCloud pointCloud = tileInfo.getPointCloud();
-            vertexCount.addAndGet(pointCloud.getVertexCount());
+            vertexCount.addAndGet(pointCloud.getPointCount());
             boundingBox.addBoundingBox(pointCloud.getGaiaBoundingBox());
         });
 
@@ -69,7 +69,7 @@ public class PointCloudModel implements ContentModel {
         wgs84BoundingBox.addPoint(minPosition);
         wgs84BoundingBox.addPoint(maxPosition);
 
-        int vertexLength = vertexCount.get();
+        int vertexLength = Math.toIntExact(vertexCount.get());
         float[] positions = new float[vertexLength * 3];
         int[] quantizedPositions = new int[vertexLength * 3];
         byte[] colors = new byte[vertexLength * 3];
@@ -94,8 +94,8 @@ public class PointCloudModel implements ContentModel {
         AtomicInteger colorIndex = new AtomicInteger();
         tileInfos.forEach((tileInfo) -> {
             GaiaPointCloud pointCloud = tileInfo.getPointCloud();
-            pointCloud.maximize();
-            List<GaiaVertex> gaiaVertex = pointCloud.getVertices();
+            pointCloud.maximize(false);
+            List<GaiaLasPoint> gaiaVertex = pointCloud.getLasPoints();
             gaiaVertex.forEach((vertex) -> {
                 int index = mainIndex.getAndIncrement();
                 if (index > vertexLength) {
@@ -103,15 +103,7 @@ public class PointCloudModel implements ContentModel {
                     return;
                 }
 
-                Vector3d position = vertex.getPosition();
-                Vector3d wgs84Position = new Vector3d();
-                try {
-                    ProjCoordinate transformedCoordinate = transformer.transform(new ProjCoordinate(position.x, position.y, position.z), new ProjCoordinate());
-                    wgs84Position = new Vector3d(transformedCoordinate.x, transformedCoordinate.y, position.z);
-                } catch (InvalidValueException e) {
-                    log.debug("Invalid value exception", e);
-                }
-
+                Vector3d wgs84Position = vertex.getVec3Position();
                 Vector3d positionWorldCoordinate = GlobeUtils.geographicToCartesianWgs84(wgs84Position);
                 Vector3d localPosition = positionWorldCoordinate.mulPosition(transformMatrixInv, new Vector3d());
                 localPosition.mulPosition(rotationMatrix4d, localPosition);
@@ -125,7 +117,7 @@ public class PointCloudModel implements ContentModel {
                 positions[positionIndex.getAndIncrement()] = y;
                 positions[positionIndex.getAndIncrement()] = z;
 
-                byte[] color = vertex.getColor();
+                byte[] color = vertex.getRgb();
                 colors[colorIndex.getAndIncrement()] = color[0];
                 colors[colorIndex.getAndIncrement()] = color[1];
                 colors[colorIndex.getAndIncrement()] = color[2];
@@ -133,7 +125,7 @@ public class PointCloudModel implements ContentModel {
                 intensity[index] = vertex.getIntensity();
                 classification[index] = vertex.getClassification();
             });
-            pointCloud.minimizeTemp();
+            pointCloud.clearPoints();
         });
 
         // quantization
@@ -217,13 +209,13 @@ public class PointCloudModel implements ContentModel {
 
         GaiaFeatureTable featureTable = new GaiaFeatureTable();
         featureTable.setPointsLength(vertexLength);
-        featureTable.setQuantizedVolumeOffset(new float[]{(float) quantizationOffset.x, (float) quantizationOffset.y, (float) quantizationOffset.z});
-        featureTable.setQuantizedVolumeScale(new float[]{(float) quantizationScale.x, (float) quantizationScale.y, (float) quantizationScale.z});
+        featureTable.setQuantizedVolumeOffset(new Float[]{(float) quantizationOffset.x, (float) quantizationOffset.y, (float) quantizationOffset.z});
+        featureTable.setQuantizedVolumeScale(new Float[]{(float) quantizationScale.x, (float) quantizationScale.y, (float) quantizationScale.z});
         featureTable.setPositionQuantized(new ByteAddress(0, ComponentType.UNSIGNED_SHORT, DataType.VEC3));
         featureTable.setColor(new ByteAddress(positionBytes.length, ComponentType.UNSIGNED_BYTE, DataType.VEC3));
 
         if (!globalOptions.isClassicTransformMatrix()) {
-            double[] rtcCenter = new double[3];
+            Double[] rtcCenter = new Double[3];
             rtcCenter[0] = transformMatrix.m30();
             rtcCenter[1] = transformMatrix.m31();
             rtcCenter[2] = transformMatrix.m32();

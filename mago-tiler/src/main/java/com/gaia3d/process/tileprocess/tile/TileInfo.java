@@ -4,8 +4,8 @@ import com.gaia3d.basic.exchangable.GaiaSet;
 import com.gaia3d.basic.geometry.GaiaBoundingBox;
 import com.gaia3d.basic.model.GaiaNode;
 import com.gaia3d.basic.model.GaiaScene;
-import com.gaia3d.basic.pointcloud.GaiaPointCloud;
 import com.gaia3d.converter.kml.TileTransformInfo;
+import com.gaia3d.converter.pointcloud.GaiaPointCloud;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -47,19 +47,9 @@ public class TileInfo {
     @Builder.Default
     private boolean isI3dm = false;
 
+    @Deprecated
     private void init() {
-        GaiaNode rootNode = this.scene.getNodes().get(0);
-        this.name = rootNode.getName();
-        this.transformMatrix = rootNode.getTransformMatrix();
-        this.boundingBox = this.scene.getGaiaBoundingBox();
-        this.scenePath = this.scene.getOriginalPath();
 
-        this.outputPath = this.outputPath.resolve(this.name).resolve("temp");
-        this.tempPath = this.outputPath.resolve("temp");
-        File tempFile = this.tempPath.toFile();
-        if (!tempFile.exists() && tempFile.mkdir()) {
-            log.info("[Pre] Created temp directory in {}", this.tempPath);
-        }
     }
 
     /**
@@ -87,7 +77,6 @@ public class TileInfo {
     public void clear() {
         this.scene = null;
         this.set = null;
-        pointCloud = null;
         tileTransformInfo = null;
         transformMatrix = null;
         boundingBox = null;
@@ -96,7 +85,6 @@ public class TileInfo {
         tempPath = null;
         tempPathLod = null;
         cartographicBBox = null;
-
     }
 
     public void deleteTemp() throws IOException {
@@ -123,7 +111,6 @@ public class TileInfo {
                 .serial(this.serial)
                 .scene(this.scene)
                 .set(this.set)
-                .pointCloud(this.pointCloud)
                 .name(this.name)
                 .tileTransformInfo(this.tileTransformInfo)
                 .transformMatrix(this.transformMatrix)

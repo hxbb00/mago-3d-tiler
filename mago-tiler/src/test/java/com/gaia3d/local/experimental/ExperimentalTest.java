@@ -5,8 +5,35 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+
 @Tag("experimental")
 public class ExperimentalTest {
+
+    @Test
+    void validateShape() {
+        String path = "buld_DJ";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getTempPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-c", "5186",
+                //"-tilesVersion", "1.0",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void ifcBug() {
+        String path = "AC20-FZK-Haus.glb";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getTempPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                //"-c", "32652",
+                //"-r",
+                //"-debug"
+        };
+        MagoTestConfig.execute(args);
+    }
 
     @Test
     void pointcloudIntersection00() {

@@ -22,6 +22,7 @@ import com.gaia3d.basic.model.GaiaScene;
 import com.gaia3d.basic.model.GaiaTexture;
 import com.gaia3d.basic.remesher.CellGrid3D;
 import com.gaia3d.basic.remesher.ReMeshParameters;
+import com.gaia3d.basic.types.LevelOfDetail;
 import com.gaia3d.basic.types.TextureType;
 import com.gaia3d.command.mago.GlobalConstants;
 import com.gaia3d.command.mago.GlobalOptions;
@@ -797,6 +798,7 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
 
             List<HalfEdgeScene> resultHalfEdgeScenes = new ArrayList<>();
             String outputPathString = globalOptions.getOutputPath();
+            String tempPath = globalOptions.getTempPath();
             String nodeName = "node_L_" + nodeDepth + "_" + i;
             tilerExtensionModule.integralReMeshByObliqueCameraV2(sceneInfos, resultHalfEdgeScenes, reMeshParams, nodeBBoxLC,
                     nodeTMatrix, maxScreenSize, outputPathString, nodeName, lod);
@@ -808,13 +810,13 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
 
             HalfEdgeScene halfEdgeScene = resultHalfEdgeScenes.get(0);
 
-            String netTempPathString = outputPathString + File.separator + "temp" + File.separator + "reMeshTemp";
-            String netSetFolderPathString = netTempPathString + File.separator + nodeName;
+            String netTempPathString = Path.of(tempPath, "reMeshTemp").toString();
+            String netSetFolderPathString = Path.of(netTempPathString, nodeName).toString();
             Path netSetFolderPath = Paths.get(netSetFolderPathString);
 
             GaiaScene gaiaScene = HalfEdgeUtils.gaiaSceneFromHalfEdgeScene(halfEdgeScene);
             GaiaSet gaiaSet = GaiaSet.fromGaiaScene(gaiaScene);
-            Path netSetPath = Paths.get(netSetFolderPathString + File.separator + "netSet_nodeDepth_" + nodeDepth + "_" + i + ".tmp");
+            Path netSetPath = Paths.get(netSetFolderPathString, "netSet_nodeDepth_" + nodeDepth + "_" + i + ".tmp");
             gaiaSet.writeFileInThePath(netSetPath);
 
             List<GaiaNode> gaiaNodes = gaiaScene.getNodes();
@@ -1165,7 +1167,8 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
 
             // create tileInfos for the cut scenes
             String outputPathString = globalOptions.getOutputPath();
-            String cutTempPathString = outputPathString + File.separator + "temp" + File.separator + "cutTemp";
+            String tempPathString = globalOptions.getTempPath();
+            String cutTempPathString = Path.of(tempPathString, "cutTemp").toString();
             Path cutTempPath = Paths.get(cutTempPathString);
             // create directory if not exists
             if (!cutTempPath.toFile().exists() && cutTempPath.toFile().mkdirs()) {
@@ -1219,11 +1222,6 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
                     List<GaiaTexture> textures = material.getTextures().get(TextureType.DIFFUSE);
                     for (GaiaTexture texture : textures) {
                         // check if exist bufferedImage of the texture
-
-                        if (texture.getBufferedImage() == null) {
-
-                        }
-
                         texture.setParentPath(imagesPath.toString());
                         texture.saveImage(texture.getFullPath());
                     }
@@ -1346,8 +1344,8 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
             BufferedImage bufferedImageDepth = resultImages.get(1);
 
             // now, make a halfEdgeScene from the bufferedImages
-            String outputPathString = globalOptions.getOutputPath();
-            String netTempPathString = outputPathString + File.separator + "temp" + File.separator + "netTemp";
+            String tempPathString = globalOptions.getTempPath();
+            String netTempPathString = Path.of(tempPathString, "netTemp").toString();
             Path netTempPath = Paths.get(netTempPathString);
             // create dirs if not exists
             File netTempFile = netTempPath.toFile();
@@ -1803,8 +1801,8 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
         boolean makeSkirt = GlobalConstants.MAKE_SKIRT;
 
         // create tileInfos for the cut scenes
-        String outputPathString = globalOptions.getOutputPath();
-        String cutTempPathString = outputPathString + File.separator + "temp" + File.separator + "cutTemp";
+        String tempPathString = globalOptions.getTempPath();
+        String cutTempPathString = Path.of(tempPathString, "cutTemp").toString();
         Path cutTempPath = Paths.get(cutTempPathString);
         // create directory if not exists
         if (!cutTempPath.toFile().exists() && cutTempPath.toFile().mkdirs()) {

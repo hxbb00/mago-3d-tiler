@@ -23,6 +23,7 @@ class I3dmReleaseTest {
                 "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
                 "-ot", "i3dm",
                 "-c", "5186",
+                "--tilesVersion", "1.0",
         };
         MagoTestConfig.execute(args);
     }
@@ -81,7 +82,6 @@ class I3dmReleaseTest {
     void instanced04() {
         String path = "I04-forest-shp";
         String[] args = new String[]{
-                "-tilesVersion", "1.0",
                 "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
                 "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
                 "-c", "5179",
@@ -171,6 +171,22 @@ class I3dmReleaseTest {
                 "-i", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
                 "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
                 "-merge",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void instanced09C() {
+        String path = "I09-forest-map-big";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath("ESD/" + path).getAbsolutePath() + "-C",
+                "-c", "5179",
+                "-ot", "forest",
+                //"-refineAdd",
+                "-instance", MagoTestConfig.getInputPath(path).getAbsolutePath() + "/instance.glb",
+                //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+                "-attributeFilter", "FRTP_NM=침엽수림",
         };
         MagoTestConfig.execute(args);
     }
