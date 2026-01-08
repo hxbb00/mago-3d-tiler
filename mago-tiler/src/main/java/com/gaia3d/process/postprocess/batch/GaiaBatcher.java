@@ -52,7 +52,9 @@ public class GaiaBatcher {
                 if (visitedMap.containsKey(dataSet2)) {
                     continue;
                 }
-                if (dataSet == dataSet2) {continue;}
+                if (dataSet == dataSet2) {
+                    continue;
+                }
                 if (material2 == material) {
                     visitedMap.put(dataSet2, true); // set visited
                     continue;

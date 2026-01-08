@@ -11,6 +11,7 @@ import com.gaia3d.process.postprocess.ContentModel;
 import com.gaia3d.process.postprocess.instance.GaiaFeatureTable;
 import com.gaia3d.process.tileprocess.tile.ContentInfo;
 import com.gaia3d.process.tileprocess.tile.TileInfo;
+import com.gaia3d.util.GaiaSceneUtils;
 import com.gaia3d.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.joml.Matrix3d;
@@ -142,6 +143,7 @@ public class Batched3DModelV2 implements ContentModel {
         if (globalOptions.isPhotogrammetry()) {
             scene.deleteNormals();
         }
+
         this.gltfWriter.writeGlb(scene, glbOutputFile, featureTable, batchTableMap);
         return contentInfo;
     }

@@ -717,6 +717,275 @@ public class MainVoxelizer implements IAppLogic {
         integralReMeshParameters.deleteFBOs(fboManager);
     }
 
+    public void integralDecimateByObliqueCamera(List<SceneInfo> sceneInfos, List<HalfEdgeScene> resultHalfEdgeScenes, DecimateParameters decimateParameters, GaiaBoundingBox nodeBBox,
+                                                Matrix4d nodeTMatrix, int maxScreenSize, String outputPathString, String nodeName, int lod) {
+        // Note: There are only one scene in the scene list
+        // Must init gl
+        try {
+            engine.init();
+        } catch (Exception e) {
+            log.error("[ERROR] initializing the engine: ", e);
+        }
+
+        int screenWidth = 1000; // no used var
+        int screenHeight = 600; // no used var
+
+        GaiaScenesContainer gaiaScenesContainer = new GaiaScenesContainer(screenWidth, screenHeight);
+
+        // calculate the projectionMatrix for the camera
+        Vector3d bboxCenter = nodeBBox.getCenter();
+        float xLength = (float) nodeBBox.getSizeX();
+        float yLength = (float) nodeBBox.getSizeY();
+        float zLength = (float) nodeBBox.getSizeZ();
+
+        Projection projection = new Projection(0, screenWidth, screenHeight);
+        projection.setProjectionOrthographic(-xLength / 2.0f, xLength / 2.0f, -yLength / 2.0f, yLength / 2.0f, -zLength * 0.5f, zLength * 0.5f);
+        gaiaScenesContainer.setProjection(projection);
+        engine.setGaiaScenesContainer(gaiaScenesContainer);
+
+        // Take FboManager from engine
+        FboManager fboManager = engine.getFboManager();
+
+        // create the fbo
+        int fboWidthColor = maxScreenSize;
+        int fboHeightColor = maxScreenSize;
+        if (xLength > yLength) {
+            fboWidthColor = maxScreenSize;
+            fboHeightColor = (int) (maxScreenSize * yLength / xLength);
+        } else {
+            fboWidthColor = (int) (maxScreenSize * xLength / yLength);
+            fboHeightColor = maxScreenSize;
+        }
+
+        //Fbo colorFbo = fboManager.getOrCreateFbo("colorRender", fboWidthColor, fboHeightColor);
+
+        // now set camera position
+        Camera camera = new Camera();
+        camera.setPosition(bboxCenter);
+        camera.setDirection(new Vector3d(0, 0, -1));
+        camera.setUp(new Vector3d(0, 1, 0));
+        gaiaScenesContainer.setCamera(camera);
+
+
+        Matrix4d nodeMatrixInv = new Matrix4d(nodeTMatrix);
+        nodeMatrixInv.invert();
+
+        GaiaScene gaiaSceneMaster = null;
+        double weldError = 1e-5; // 1e-6 is a good value for remeshing
+
+        // IntegralReMeshParameters
+        Vector4f backgroundColor = new Vector4f(1.0f, 0.0f, 1.0f, 1.0f);
+        IntegralReMeshParameters integralReMeshParameters = new IntegralReMeshParameters();
+        integralReMeshParameters.setBackgroundColor(backgroundColor);
+        integralReMeshParameters.createFBOsObliqueCamera9Directions(this.engine.getFboManager(), fboWidthColor, fboHeightColor);
+
+        // render the scenes
+        int scenesCount = sceneInfos.size();
+        List<RenderableGaiaScene> renderableGaiaScenes = new ArrayList<>();
+        int counter = 0;
+        int faceIdAvailable = 0;
+
+        Map<Integer, Map<GaiaFace, HalfEdgeFace>> mapClassifyIdToGaiaFaceToHalfEdgeFace = new HashMap<>();
+        Map<Integer, Map<GaiaFace, CameraDirectionTypeInfo>> mapClassifyIdToGaiaFaceToCameraDirectionTypeInfo = new HashMap<>();
+        Map<Integer, Map<CameraDirectionType, GaiaBoundingBox>> mapClassificationCamDirTypeBBox = new HashMap<>();
+        Map<Integer, Map<CameraDirectionType, Matrix4d>> mapClassificationCamDirTypeModelViewMatrix = new HashMap<>();
+        Map<Integer, Map<CameraDirectionType, List<HalfEdgeFace>>> mapClassificationCamDirTypeFacesList = new HashMap<>();
+
+        FaceVisibilityDataManager faceVisibilityDataManager = new FaceVisibilityDataManager();
+
+        for (int i = 0; i < scenesCount; i++) {
+            // load and render, one by one
+            SceneInfo sceneInfo = sceneInfos.get(i);
+            String scenePath = sceneInfo.getScenePath();
+            Matrix4d sceneTMat = sceneInfo.getTransformMatrix();
+
+            // must find the local position of the scene rel to node
+            Vector3d scenePosWC = new Vector3d(sceneTMat.m30(), sceneTMat.m31(), sceneTMat.m32());
+            Vector3d scenePosLC = nodeMatrixInv.transformPosition(scenePosWC, new Vector3d());
+
+            // calculate the local sceneTMat
+            Matrix4d sceneTMatLC = new Matrix4d();
+            sceneTMatLC.identity();
+            sceneTMatLC.m30(scenePosLC.x);
+            sceneTMatLC.m31(scenePosLC.y);
+            sceneTMatLC.m32(scenePosLC.z);
+
+            renderableGaiaScenes.clear();
+
+            // load the set file
+            GaiaSet gaiaSet = null;
+            GaiaScene gaiaScene = null;
+            GaiaScene gaiaSceneCopy = null;
+            Path path = Paths.get(scenePath);
+            try {
+                gaiaSet = GaiaSet.readFile(path);
+                gaiaScene = new GaiaScene(gaiaSet);
+                gaiaSceneCopy = new GaiaScene(gaiaSet);
+                GaiaNode gaiaNode = gaiaSceneCopy.getNodes().getFirst();
+                gaiaNode.setTransformMatrix(new Matrix4d(sceneTMatLC));
+                gaiaNode.setPreMultipliedTransformMatrix(new Matrix4d(sceneTMatLC));
+                RenderableGaiaScene renderableScene = InternDataConverter.getRenderableGaiaScene(gaiaSceneCopy);
+                renderableGaiaScenes.add(renderableScene);
+            } catch (Exception e) {
+                log.error("[ERROR] reading the file: ", e);
+            }
+
+            if (gaiaScene == null) {
+                // throw error
+                throw new RuntimeException("[ERROR] integralReMeshByObliqueCamera : GaiaScene is null");
+            }
+
+            gaiaScenesContainer.setRenderableGaiaScenes(renderableGaiaScenes);
+
+            // decimate the scene.****************************************************************************************
+            GaiaTriangulator triangulator = new GaiaTriangulator();
+            triangulator.apply(gaiaScene);
+
+            GaiaNode gaiaNode = gaiaScene.getNodes().getFirst();
+            gaiaNode.setTransformMatrix(new Matrix4d(sceneTMatLC));
+            gaiaNode.setPreMultipliedTransformMatrix(new Matrix4d(sceneTMatLC));
+
+            GaiaBaker baker = new GaiaBaker();
+            baker.apply(gaiaScene);
+            gaiaScene.joinAllSurfaces();
+
+            GaiaWeldOptions weldOptions = GaiaWeldOptions.builder()
+                    .error(weldError)
+                    .checkTexCoord(false)
+                    .checkNormal(false)
+                    .checkColor(false)
+                    .checkBatchId(false)
+                    .build();
+            GaiaWelder weld = new GaiaWelder(weldOptions);
+            weld.apply(gaiaScene);
+
+            GaiaSceneCleaner cleaner = new GaiaSceneCleaner();
+            cleaner.apply(gaiaScene);
+            List<GaiaMaterial> materials = gaiaScene.getMaterials();
+
+            // delete materials.
+            for (GaiaMaterial material : materials) {
+                material.clear();
+            }
+            gaiaScene.getMaterials().clear();
+
+            HalfEdgeScene halfEdgeScene = HalfEdgeUtils.halfEdgeSceneFromGaiaScene(gaiaScene);
+            halfEdgeScene.decimate(decimateParameters);
+
+            //**********************************************************************************************************
+
+            try {
+                // render the scene
+                log.info("Rendering the scene : " + i + " / " + scenesCount + ". LOD : " + lod);
+
+                // for each gaiaScene, set the available faceIds, to use for colorCoded rendering
+                List<HalfEdgeSurface> halfEdgeSurfaces = halfEdgeScene.extractSurfaces(null);
+                for (HalfEdgeSurface halfEdgeSurface : halfEdgeSurfaces) {
+                    List<HalfEdgeFace> halfEdgeFaces = halfEdgeSurface.getFaces();
+                    for (HalfEdgeFace halfEdgeFace : halfEdgeFaces) {
+                        halfEdgeFace.setId(faceIdAvailable);
+                        faceIdAvailable++;
+                    }
+                }
+
+                gaiaScene = HalfEdgeUtils.gaiaSceneFromHalfEdgeScene(halfEdgeScene);
+
+                int bufferedImageType = BufferedImage.TYPE_INT_ARGB;
+                int texturePixelsForMeter = 20; // decimateParameters.getTexturePixelsForMeter();
+                engine.makeIntegralBoxTexturesByObliqueCamera9Directions(halfEdgeScene, texturePixelsForMeter, bufferedImageType, nodeBBox, integralReMeshParameters,
+                        mapClassifyIdToGaiaFaceToHalfEdgeFace, mapClassifyIdToGaiaFaceToCameraDirectionTypeInfo, mapClassificationCamDirTypeBBox,
+                        mapClassificationCamDirTypeModelViewMatrix, mapClassificationCamDirTypeFacesList, faceVisibilityDataManager);
+                // end of making oblique camera textures
+
+            } catch (Exception e) {
+                log.error("[ERROR] initializing the engine: ", e);
+            }
+
+            // delete renderableGaiaScenes
+            for (RenderableGaiaScene renderableScene : renderableGaiaScenes) {
+                renderableScene.deleteGLBuffers();
+            }
+
+
+            if (gaiaSceneMaster == null) {
+                gaiaSceneMaster = gaiaScene;
+            } else {
+                GaiaExtractor extractor = new GaiaExtractor();
+                List<GaiaPrimitive> primitives = extractor.extractAllPrimitives(gaiaScene);
+                GaiaNode rootNodeMaster = gaiaSceneMaster.getNodes().get(0);
+                GaiaNode nodeMaster = rootNodeMaster.getChildren().get(0);
+                GaiaMesh meshMaster = nodeMaster.getMeshes().get(0);
+                meshMaster.getPrimitives().addAll(primitives);
+                gaiaScene = null;
+            }
+
+            if (gaiaSet != null) {
+                gaiaSet.clear();
+            }
+
+            counter++;
+            if (counter > 20) {
+                counter = 0;
+            }
+        }
+
+        // Join all surfaces and weld vertices of the gaiaSceneMaster.
+        gaiaSceneMaster.joinAllSurfaces();
+        GaiaWeldOptions weldOptions = GaiaWeldOptions.builder()
+                .error(weldError)
+                .checkTexCoord(false)
+                .checkNormal(false)
+                .checkColor(false)
+                .checkBatchId(false)
+                .build();
+        GaiaWelder weld = new GaiaWelder(weldOptions);
+        weld.apply(gaiaSceneMaster);
+
+        GaiaSceneCleaner cleaner = new GaiaSceneCleaner();
+        cleaner.apply(gaiaSceneMaster);
+
+        GaiaExtractor extractor = new GaiaExtractor();
+        List<GaiaFace> gaiaFacesMaster = extractor.extractAllFaces(gaiaSceneMaster);
+        if (gaiaFacesMaster.isEmpty()) {
+            log.info("[ERROR] gaiaFacesMaster is empty");
+            return;
+        }
+
+        HalfEdgeScene halfEdgeSceneMaster = HalfEdgeUtils.halfEdgeSceneFromGaiaScene(gaiaSceneMaster);
+
+        // Here scissor the atlas textures.
+        atlasTextureForIntegralReMesh9Directions(integralReMeshParameters, halfEdgeSceneMaster, mapClassifyIdToGaiaFaceToHalfEdgeFace,
+                mapClassifyIdToGaiaFaceToCameraDirectionTypeInfo, mapClassificationCamDirTypeBBox,
+                mapClassificationCamDirTypeModelViewMatrix, mapClassificationCamDirTypeFacesList,
+                outputPathString, nodeName);
+        // end of atlas texture*************************************************************************************
+
+        //if (makeHorizontalSkirt) {
+        //halfEdgeSceneMaster.makeHorizontalSkirt();
+        //}
+
+        // vertical skirt.********************************************************************************************
+//        GaiaBoundingBox hedgeSceneBBox = halfEdgeSceneMaster.getBoundingBox();
+//        double skirtHeight = hedgeSceneBBox.getMaxSize() * 0.04;
+//        makeVerticalSkirtForIntegralReMesh(halfEdgeSceneMaster, reMeshParams, skirtHeight);
+        // end of vertical skirt.*************************************************************************************
+
+        int hola = 0;
+
+
+        resultHalfEdgeScenes.add(halfEdgeSceneMaster);
+
+        // delete renderableGaiaScenes
+        engine.deleteObjects();
+        for (RenderableGaiaScene renderableScene : renderableGaiaScenes) {
+            renderableScene.deleteGLBuffers();
+        }
+
+        engine.deleteObjects();
+        engine.getGaiaScenesContainer().deleteObjects();
+        integralReMeshParameters.deleteFBOs(fboManager);
+    }
+
     private void makeVerticalSkirtForIntegralReMesh(HalfEdgeScene halfEdgeSceneMaster, ReMeshParameters reMeshParameters, double skirtHeight) {
         //*******************************************************
         // note: the halfEdgeSceneMaster has only one surface.***
@@ -1129,6 +1398,410 @@ public class MainVoxelizer implements IAppLogic {
         textures = material.getTextures();
         atlasTextures = textures.get(TextureType.DIFFUSE);
         GaiaTexture atlasScissoredTexture = atlasTextures.get(0);
+        atlasScissoredTexture.setParentPath(netSetImagesFolderPath.toString());
+
+        // save the atlas image to disk
+        try {
+            String imagePath = atlasScissoredTexture.getFullPath();
+            File imageFile = new File(imagePath);
+            ImageIO.write(atlasScissoredTexture.getBufferedImage(), "png", imageFile);
+        } catch (IOException e) {
+            log.debug("Error writing image: {}", e);
+        }
+    }
+
+    private void atlasTextureForIntegralReMesh9Directions(IntegralReMeshParameters integralReMeshParameters, HalfEdgeScene halfEdgeSceneMaster,
+                                                          Map<Integer, Map<GaiaFace, HalfEdgeFace>> mapClassifyIdToGaiaFaceToHalfEdgeFace,
+                                                          Map<Integer, Map<GaiaFace, CameraDirectionTypeInfo>> mapClassifyIdToGaiaFaceToCameraDirectionTypeInfo,
+                                                          Map<Integer, Map<CameraDirectionType, GaiaBoundingBox>> mapClassificationCamDirTypeBBox,
+                                                          Map<Integer, Map<CameraDirectionType, Matrix4d>> mapClassificationCamDirTypeModelViewMatrix,
+                                                          Map<Integer, Map<CameraDirectionType, List<HalfEdgeFace>>> mapClassificationCamDirTypeFacesList,
+                                                          String outputPathString, String nodeName) {
+        List<HalfEdgeSurface> surfaces = halfEdgeSceneMaster.extractSurfaces(null);
+
+        Map<Integer, List<HalfEdgeFace>> facesClassificationMap = new HashMap<>();
+        int surfacesCount = surfaces.size();
+        for (int i = 0; i < surfacesCount; i++) {
+            HalfEdgeSurface surface = surfaces.get(i);
+            int facesCount = surface.getFaces().size();
+            for (int j = 0; j < facesCount; j++) {
+                HalfEdgeFace face = surface.getFaces().get(j);
+                int classificationId = face.getClassifyId();
+                List<HalfEdgeFace> facesList = facesClassificationMap.computeIfAbsent(classificationId, k -> new ArrayList<>());
+                facesList.add(face);
+            }
+        }
+
+        int classificationId = -1; // in integralReMesh, there is only one classificationId = -1
+
+        int bufferedImageType = BufferedImage.TYPE_INT_ARGB;
+        List<TexturesAtlasData> texturesAtlasDataList = new ArrayList<>();
+        Map<String, Fbo> colorFboMap = integralReMeshParameters.getColorFboMap();
+
+        Vector4f backgroundColor = integralReMeshParameters.getBackgroundColor();
+
+        // ZNEG
+        Fbo fboZNeg = colorFboMap.get("ZNEG");
+        fboZNeg.bind();
+        BufferedImage imageZNeg = fboZNeg.getBufferedImage(bufferedImageType);
+        fboZNeg.unbind();
+        imageZNeg = engine.eliminateBackGroundColor(imageZNeg, backgroundColor);
+        if (imageZNeg != null) {
+            TexturesAtlasData texturesAtlasDataYPosZNeg = new TexturesAtlasData();
+            texturesAtlasDataYPosZNeg.setClassifyId(classificationId);
+            texturesAtlasDataYPosZNeg.setCameraDirectionType(CameraDirectionType.CAMERA_DIRECTION_ZNEG);
+            texturesAtlasDataYPosZNeg.setTextureImage(imageZNeg);
+            texturesAtlasDataList.add(texturesAtlasDataYPosZNeg);
+        }
+
+        // YPOS_ZNEG
+        Fbo fboYPosZNeg = colorFboMap.get("YPOS_ZNEG");
+        fboYPosZNeg.bind();
+        BufferedImage imageYPosZNeg = fboYPosZNeg.getBufferedImage(bufferedImageType);
+        fboYPosZNeg.unbind();
+        imageYPosZNeg = engine.eliminateBackGroundColor(imageYPosZNeg, backgroundColor);
+        if (imageYPosZNeg != null) {
+            TexturesAtlasData texturesAtlasDataYPosZNeg = new TexturesAtlasData();
+            texturesAtlasDataYPosZNeg.setClassifyId(classificationId);
+            texturesAtlasDataYPosZNeg.setCameraDirectionType(CameraDirectionType.CAMERA_DIRECTION_YPOS_ZNEG);
+            texturesAtlasDataYPosZNeg.setTextureImage(imageYPosZNeg);
+            texturesAtlasDataList.add(texturesAtlasDataYPosZNeg);
+        }
+
+        // YNEG_ZNEG
+        Fbo fboYNegZNeg = colorFboMap.get("YNEG_ZNEG");
+        fboYNegZNeg.bind();
+        BufferedImage imageYNegZNeg = fboYNegZNeg.getBufferedImage(bufferedImageType);
+        fboYNegZNeg.unbind();
+        imageYNegZNeg = engine.eliminateBackGroundColor(imageYNegZNeg, backgroundColor);
+        if (imageYNegZNeg != null) {
+            TexturesAtlasData texturesAtlasDataYNegZNeg = new TexturesAtlasData();
+            texturesAtlasDataYNegZNeg.setClassifyId(classificationId);
+            texturesAtlasDataYNegZNeg.setCameraDirectionType(CameraDirectionType.CAMERA_DIRECTION_YNEG_ZNEG);
+            texturesAtlasDataYNegZNeg.setTextureImage(imageYNegZNeg);
+            texturesAtlasDataList.add(texturesAtlasDataYNegZNeg);
+        }
+
+        // XPOS_ZNEG
+        Fbo fboXPosZNeg = colorFboMap.get("XPOS_ZNEG");
+        fboXPosZNeg.bind();
+        BufferedImage imageXPosZNeg = fboXPosZNeg.getBufferedImage(bufferedImageType);
+        fboXPosZNeg.unbind();
+        imageXPosZNeg = engine.eliminateBackGroundColor(imageXPosZNeg, backgroundColor);
+        if (imageXPosZNeg != null) {
+            TexturesAtlasData texturesAtlasDataXPosZNeg = new TexturesAtlasData();
+            texturesAtlasDataXPosZNeg.setClassifyId(classificationId);
+            texturesAtlasDataXPosZNeg.setCameraDirectionType(CameraDirectionType.CAMERA_DIRECTION_XPOS_ZNEG);
+            texturesAtlasDataXPosZNeg.setTextureImage(imageXPosZNeg);
+            texturesAtlasDataList.add(texturesAtlasDataXPosZNeg);
+        }
+
+        // XNEG_ZNEG
+        Fbo fboXNegZNeg = colorFboMap.get("XNEG_ZNEG");
+        fboXNegZNeg.bind();
+        BufferedImage imageXNegZNeg = fboXNegZNeg.getBufferedImage(bufferedImageType);
+        fboXNegZNeg.unbind();
+        imageXNegZNeg = engine.eliminateBackGroundColor(imageXNegZNeg, backgroundColor);
+        if (imageXNegZNeg != null) {
+            TexturesAtlasData texturesAtlasDataXNegZNeg = new TexturesAtlasData();
+            texturesAtlasDataXNegZNeg.setClassifyId(classificationId);
+            texturesAtlasDataXNegZNeg.setCameraDirectionType(CameraDirectionType.CAMERA_DIRECTION_XNEG_ZNEG);
+            texturesAtlasDataXNegZNeg.setTextureImage(imageXNegZNeg);
+            texturesAtlasDataList.add(texturesAtlasDataXNegZNeg);
+        }
+
+        // XPOS_YPOS_ZNEG
+        Fbo fboXPosYPosZNeg = colorFboMap.get("XPOS_YPOS_ZNEG");
+        fboXPosYPosZNeg.bind();
+        BufferedImage imageXPosYPosZNeg = fboXPosYPosZNeg.getBufferedImage(bufferedImageType);
+        fboXPosYPosZNeg.unbind();
+        imageXPosYPosZNeg = engine.eliminateBackGroundColor(imageXPosYPosZNeg, backgroundColor);
+        if (imageXPosYPosZNeg != null) {
+            TexturesAtlasData texturesAtlasDataXPosYPosZNeg = new TexturesAtlasData();
+            texturesAtlasDataXPosYPosZNeg.setClassifyId(classificationId);
+            texturesAtlasDataXPosYPosZNeg.setCameraDirectionType(CameraDirectionType.CAMERA_DIRECTION_XPOS_YPOS_ZNEG);
+            texturesAtlasDataXPosYPosZNeg.setTextureImage(imageXPosYPosZNeg);
+            texturesAtlasDataList.add(texturesAtlasDataXPosYPosZNeg);
+        }
+
+        // XNEG_YPOS_ZNEG
+        Fbo fboXNegYPosZNeg = colorFboMap.get("XNEG_YPOS_ZNEG");
+        fboXNegYPosZNeg.bind();
+        BufferedImage imageXNegYPosZNeg = fboXNegYPosZNeg.getBufferedImage(bufferedImageType);
+        fboXNegYPosZNeg.unbind();
+        imageXNegYPosZNeg = engine.eliminateBackGroundColor(imageXNegYPosZNeg, backgroundColor);
+        if (imageXNegYPosZNeg != null) {
+            TexturesAtlasData texturesAtlasDataXNegYPosZNeg = new TexturesAtlasData();
+            texturesAtlasDataXNegYPosZNeg.setClassifyId(classificationId);
+            texturesAtlasDataXNegYPosZNeg.setCameraDirectionType(CameraDirectionType.CAMERA_DIRECTION_XNEG_YPOS_ZNEG);
+            texturesAtlasDataXNegYPosZNeg.setTextureImage(imageXNegYPosZNeg);
+            texturesAtlasDataList.add(texturesAtlasDataXNegYPosZNeg);
+        }
+
+        // XPOS_YNEG_ZNEG
+        Fbo fboXPosYNegZNeg = colorFboMap.get("XPOS_YNEG_ZNEG");
+        fboXPosYNegZNeg.bind();
+        BufferedImage imageXPosYNegZNeg = fboXPosYNegZNeg.getBufferedImage(bufferedImageType);
+        fboXPosYNegZNeg.unbind();
+        imageXPosYNegZNeg = engine.eliminateBackGroundColor(imageXPosYNegZNeg, backgroundColor);
+        if (imageXPosYNegZNeg != null) {
+            TexturesAtlasData texturesAtlasDataXPosYNegZNeg = new TexturesAtlasData();
+            texturesAtlasDataXPosYNegZNeg.setClassifyId(classificationId);
+            texturesAtlasDataXPosYNegZNeg.setCameraDirectionType(CameraDirectionType.CAMERA_DIRECTION_XPOS_YNEG_ZNEG);
+            texturesAtlasDataXPosYNegZNeg.setTextureImage(imageXPosYNegZNeg);
+            texturesAtlasDataList.add(texturesAtlasDataXPosYNegZNeg);
+        }
+
+        // XNEG_YNEG_ZNEG
+        Fbo fboXNegYNegZNeg = colorFboMap.get("XNEG_YNEG_ZNEG");
+        fboXNegYNegZNeg.bind();
+        BufferedImage imageXNegYNegZNeg = fboXNegYNegZNeg.getBufferedImage(bufferedImageType);
+        fboXNegYNegZNeg.unbind();
+        imageXNegYNegZNeg = engine.eliminateBackGroundColor(imageXNegYNegZNeg, backgroundColor);
+        if (imageXNegYNegZNeg != null) {
+            TexturesAtlasData texturesAtlasDataXNegYNegZNeg = new TexturesAtlasData();
+            texturesAtlasDataXNegYNegZNeg.setClassifyId(classificationId);
+            texturesAtlasDataXNegYNegZNeg.setCameraDirectionType(CameraDirectionType.CAMERA_DIRECTION_XNEG_YNEG_ZNEG);
+            texturesAtlasDataXNegYNegZNeg.setTextureImage(imageXNegYNegZNeg);
+            texturesAtlasDataList.add(texturesAtlasDataXNegYNegZNeg);
+        }
+
+        // There are no visible faces, so 1rst set the CAMERA_DIRECTION_ZNEG to all the halfEdgeFaces as default
+        List<HalfEdgeFace> facesList = facesClassificationMap.get(classificationId);
+        if (facesList == null) {
+            log.error("atlasTextureForIntegralReMesh: facesList is null for classificationId: " + classificationId);
+            return;
+        }
+        for (HalfEdgeFace halfEdgeFace : facesList) {
+            halfEdgeFace.setCameraDirectionType(CameraDirectionType.CAMERA_DIRECTION_ZNEG);
+        }
+
+        // check visibility data manager****************************************************************************
+        FaceVisibilityDataManager faceVisibilityDataManager = new FaceVisibilityDataManager();
+
+        Map<String, Fbo> colorCodeFboMap = integralReMeshParameters.getColorCodeFboMap();
+        Fbo fboColorCodeZNeg = colorCodeFboMap.get("ZNEG");
+        updateFaceVisibilityData(CameraDirectionType.CAMERA_DIRECTION_ZNEG, fboColorCodeZNeg, faceVisibilityDataManager);
+        Fbo fboColorCodeYPosZNeg = colorCodeFboMap.get("YPOS_ZNEG");
+        updateFaceVisibilityData(CameraDirectionType.CAMERA_DIRECTION_YPOS_ZNEG, fboColorCodeYPosZNeg, faceVisibilityDataManager);
+        Fbo fboColorCodeYNegZNeg = colorCodeFboMap.get("YNEG_ZNEG");
+        updateFaceVisibilityData(CameraDirectionType.CAMERA_DIRECTION_YNEG_ZNEG, fboColorCodeYNegZNeg, faceVisibilityDataManager);
+        Fbo fboColorCodeXPosZNeg = colorCodeFboMap.get("XPOS_ZNEG");
+        updateFaceVisibilityData(CameraDirectionType.CAMERA_DIRECTION_XPOS_ZNEG, fboColorCodeXPosZNeg, faceVisibilityDataManager);
+        Fbo fboColorCodeXNegZNeg = colorCodeFboMap.get("XNEG_ZNEG");
+        updateFaceVisibilityData(CameraDirectionType.CAMERA_DIRECTION_XNEG_ZNEG, fboColorCodeXNegZNeg, faceVisibilityDataManager);
+        Fbo fboColorCodeXPosYPosZNeg = colorCodeFboMap.get("XPOS_YPOS_ZNEG");
+        updateFaceVisibilityData(CameraDirectionType.CAMERA_DIRECTION_XPOS_YPOS_ZNEG, fboColorCodeXPosYPosZNeg, faceVisibilityDataManager);
+        Fbo fboColorCodeXNegYPosZNeg = colorCodeFboMap.get("XNEG_YPOS_ZNEG");
+        updateFaceVisibilityData(CameraDirectionType.CAMERA_DIRECTION_XNEG_YPOS_ZNEG, fboColorCodeXNegYPosZNeg, faceVisibilityDataManager);
+        Fbo fboColorCodeXPosYNegZNeg = colorCodeFboMap.get("XPOS_YNEG_ZNEG");
+        updateFaceVisibilityData(CameraDirectionType.CAMERA_DIRECTION_XPOS_YNEG_ZNEG, fboColorCodeXPosYNegZNeg, faceVisibilityDataManager);
+        Fbo fboColorCodeXNegYNegZNeg = colorCodeFboMap.get("XNEG_YNEG_ZNEG");
+        updateFaceVisibilityData(CameraDirectionType.CAMERA_DIRECTION_XNEG_YNEG_ZNEG, fboColorCodeXNegYNegZNeg, faceVisibilityDataManager);
+        // end of checking visibility data manager*****************************************************************
+
+        // now assign face to each cameraDirectionType
+        Map<GaiaFace, HalfEdgeFace> mapGaiaFaceToHalfEdgeFace = mapClassifyIdToGaiaFaceToHalfEdgeFace.computeIfAbsent(classificationId, k -> new HashMap<>());
+        Map<GaiaFace, CameraDirectionTypeInfo> mapGaiaFaceToCameraDirectionTypeInfo = mapClassifyIdToGaiaFaceToCameraDirectionTypeInfo.computeIfAbsent(classificationId, k -> new HashMap<>());
+
+        GaiaScene gaiaSceneFromFaces = HalfEdgeUtils.gaiaSceneFromHalfEdgeFaces(facesList, mapGaiaFaceToHalfEdgeFace);
+        GaiaExtractor extractor = new GaiaExtractor();
+        List<GaiaPrimitive> gaiaPrimitives = extractor.extractAllPrimitives(gaiaSceneFromFaces);
+        for (GaiaPrimitive gaiaPrimitive : gaiaPrimitives) {
+            List<GaiaSurface> gaiaSurfaces = gaiaPrimitive.getSurfaces();
+            for (GaiaSurface surface : gaiaSurfaces) {
+                List<GaiaFace> faces = surface.getFaces();
+                for (GaiaFace face : faces) {
+                    int faceId = face.getId();
+                    CameraDirectionType bestCamDirType = faceVisibilityDataManager.getBestCameraDirectionTypeOfFace(faceId);
+                    if (bestCamDirType == null) {
+                        bestCamDirType = CameraDirectionType.CAMERA_DIRECTION_ZNEG;
+                    }
+
+                    // put it into map
+                    CameraDirectionTypeInfo cameraDirectionTypeInfo = mapGaiaFaceToCameraDirectionTypeInfo.get(face);
+                    if (cameraDirectionTypeInfo == null) {
+                        cameraDirectionTypeInfo = new CameraDirectionTypeInfo();
+                        mapGaiaFaceToCameraDirectionTypeInfo.put(face, cameraDirectionTypeInfo);
+                    }
+
+                    cameraDirectionTypeInfo.setCameraDirectionType(bestCamDirType);
+                    cameraDirectionTypeInfo.setAngleDegree(120.0); // no used value
+                    mapGaiaFaceToCameraDirectionTypeInfo.put(face, cameraDirectionTypeInfo);
+                }
+            }
+        }
+
+        faceVisibilityDataManager.deleteObjects();
+        // end assign face to each cameraDirectionType.---
+
+        // now set cameraDirectionType to halfEdgeFaces
+        for (Map.Entry<GaiaFace, CameraDirectionTypeInfo> entry1 : mapGaiaFaceToCameraDirectionTypeInfo.entrySet()) {
+            GaiaFace gaiaFace = entry1.getKey();
+            CameraDirectionTypeInfo cameraDirectionTypeInfo = entry1.getValue();
+            HalfEdgeFace halfEdgeFace = mapGaiaFaceToHalfEdgeFace.get(gaiaFace);
+            halfEdgeFace.setCameraDirectionType(cameraDirectionTypeInfo.getCameraDirectionType());
+        }
+
+        //**************************************************************************************************************
+        halfEdgeSceneMaster.splitFacesByBestObliqueCameraDirectionToProject();
+
+        // now, for each classifyId - CameraDirectionType, calculate the texCoords
+        Map<Integer, Map<CameraDirectionType, List<HalfEdgeFace>>> mapFaceGroupByClassifyIdAndObliqueCamDirType = new HashMap<>();
+        List<HalfEdgeSurface> halfEdgeSurfaces = halfEdgeSceneMaster.extractSurfaces(null);
+        for (HalfEdgeSurface halfEdgeSurface : halfEdgeSurfaces) {
+            halfEdgeSurface.getMapClassifyIdToCameraDirectionTypeToFaces(mapFaceGroupByClassifyIdAndObliqueCamDirType);
+
+            // test create texCoords (if no exist) for all vertices
+            List<HalfEdgeVertex> vertexOfSurface = new ArrayList<>();
+            HalfEdgeUtils.getVerticesOfFaces(halfEdgeSurface.getFaces(), vertexOfSurface);
+            for (HalfEdgeVertex vertex : vertexOfSurface) {
+                if (vertex.getTexcoords() == null) {
+                    vertex.setTexcoords(new Vector2d(0.0, 0.0));
+                }
+            }
+        }
+
+        CameraDirectionType cameraDirectionType;
+
+        List<HalfEdgeVertex> verticesOfFaces = new ArrayList<>();
+        Map<HalfEdgeVertex, HalfEdgeVertex> visitedVerticesMap = new HashMap<>();
+        double texCoordError = 0.0025;
+        for (Map.Entry<Integer, Map<CameraDirectionType, List<HalfEdgeFace>>> entry : mapFaceGroupByClassifyIdAndObliqueCamDirType.entrySet()) {
+            int classifyId = entry.getKey();
+            Map<CameraDirectionType, List<HalfEdgeFace>> mapCameraDirectionTypeFacesList = entry.getValue();
+            for (Map.Entry<CameraDirectionType, List<HalfEdgeFace>> entry1 : mapCameraDirectionTypeFacesList.entrySet()) {
+                cameraDirectionType = entry1.getKey();
+                facesList = entry1.getValue();
+
+                mapClassificationCamDirTypeFacesList.put(classifyId, mapCameraDirectionTypeFacesList);
+
+                // calculate the texCoords of the vertices
+                GaiaBoundingBox bbox = mapClassificationCamDirTypeBBox.get(classifyId).get(cameraDirectionType);
+                Matrix4d modelViewMatrix = mapClassificationCamDirTypeModelViewMatrix.get(classifyId).get(cameraDirectionType);
+
+                if (modelViewMatrix == null) {
+                    log.info("makeBoxTexturesByObliqueCamera() : modelViewMatrix is null." + "camDirType = " + cameraDirectionType);
+                    continue;
+                }
+
+                for (HalfEdgeFace halfEdgeFace : facesList) {
+                    verticesOfFaces.clear();
+                    verticesOfFaces = halfEdgeFace.getVertices(verticesOfFaces);
+                    for (HalfEdgeVertex vertex : verticesOfFaces) {
+                        if (visitedVerticesMap.containsKey(vertex)) {
+                            continue;
+                        }
+                        visitedVerticesMap.put(vertex, vertex);
+
+                        Vector3d vertexPosition = vertex.getPosition();
+                        Vector4d vertexPosition4d = new Vector4d(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
+                        modelViewMatrix.transform(vertexPosition4d);
+                        double x = vertexPosition4d.x;
+                        double y = vertexPosition4d.y;
+                        double z = vertexPosition4d.z;
+                        double w = vertexPosition4d.w;
+                        double texCoordX = (x - bbox.getMinX()) / bbox.getSizeX();
+                        double texCoordY = (y - bbox.getMinY()) / bbox.getSizeY();
+
+//                        if (texCoordX < 0.0 || texCoordX > 1.0 || texCoordY < 0.0 || texCoordY > 1.0) {
+//                            log.info("makeBoxTexturesByObliqueCamera() : texCoordX or texCoordY is out of range." + "camDirType = " + cameraDirectionType);
+//                        }
+
+                        // invert the texCoordY
+                        texCoordY = 1.0 - texCoordY;
+
+                        // clamp the texCoords
+                        Vector2d texCoord = new Vector2d(texCoordX, texCoordY);
+                        GaiaTextureUtils.clampTextureCoordinate(texCoord, texCoordError);
+                        vertex.setTexcoords(texCoord);
+                    }
+                }
+            }
+        }
+
+        // save atlas texture data**********************************************************************************
+        String netTempPathString = outputPathString + File.separator + "temp" + File.separator + "reMeshTemp";
+        Path netTempPath = Paths.get(netTempPathString);
+        // create dirs if not exists
+        File netTempFile = netTempPath.toFile();
+        if (!netTempFile.exists() && netTempFile.mkdirs()) {
+            log.debug("info : netTemp folder created.");
+        }
+
+        String netSetFolderPathString = netTempPathString + File.separator + nodeName;
+        Path netSetFolderPath = Paths.get(netSetFolderPathString);
+        // create dirs if not exists
+        File netSetFile = netSetFolderPath.toFile();
+        if (!netSetFile.exists() && netTempFile.mkdirs()) {
+            log.debug("info : netSet folder created.");
+        }
+        String netSetImagesFolderPathString = netSetFolderPathString + File.separator + "images";
+        Path netSetImagesFolderPath = Paths.get(netSetImagesFolderPathString);
+        // create dirs if not exists
+        File netSetImagesFolder = netSetImagesFolderPath.toFile();
+        if (!netSetImagesFolder.exists() && netSetImagesFolder.mkdirs()) {
+            log.debug("info : netSetImages folder created.");
+        }
+
+        TextureAtlasManager textureAtlasManager = new TextureAtlasManager();
+        textureAtlasManager.doAtlasTextureProcess(texturesAtlasDataList);
+        textureAtlasManager.recalculateTexCoordsAfterTextureAtlasingObliqueCamera(halfEdgeSceneMaster, texturesAtlasDataList, mapClassificationCamDirTypeFacesList);
+
+//        String originalPathStr = halfEdgeSceneMaster.getOriginalPath().toString();
+//        Path originalPath = Path.of(originalPathStr);
+//        halfEdgeSceneMaster.setOriginalPath(originalPath);
+//        //String originalPath = halfEdgeSceneMaster.getOriginalPath().toString();
+//
+//        // extract the originalProjectName from the originalPath
+//        String originalProjectName = originalPathStr.substring(originalPathStr.lastIndexOf(File.separator) + 1);
+//        String rawProjectName = originalProjectName.substring(0, originalProjectName.lastIndexOf("."));
+
+        String fileName = nodeName + "_Atlas";
+        String extension = ".png";
+        int bufferImageType = BufferedImage.TYPE_INT_ARGB;
+        GaiaTexture atlasTexture = textureAtlasManager.makeAtlasTexture(texturesAtlasDataList, bufferImageType);
+
+        if (atlasTexture == null) {
+            log.info("makeAtlasTexture() : atlasTexture is null.");
+            return;
+        }
+
+        BufferedImage atlasImage = atlasTexture.getBufferedImage();
+
+        // delete texturesAtlasDataList
+        for (TexturesAtlasData texturesAtlasData : texturesAtlasDataList) {
+            texturesAtlasData.deleteObjects();
+        }
+
+        atlasTexture.setPath(fileName + extension);
+        atlasTexture.setParentPath(netSetImagesFolderPath.toString());
+
+        // finally make material with texture for the halfEdgeScene
+        GaiaMaterial material = new GaiaMaterial();
+        material.setName("atlasTexturesMaterial");
+        Map<TextureType, List<GaiaTexture>> textures = new HashMap<>();
+        List<GaiaTexture> atlasTextures = new ArrayList<>();
+        atlasTextures.add(atlasTexture);
+        textures.put(TextureType.DIFFUSE, atlasTextures);
+        material.setTextures(textures);
+
+        int materialsCount = halfEdgeSceneMaster.getMaterials().size();
+        material.setId(materialsCount);
+        halfEdgeSceneMaster.getMaterials().add(material);
+
+        List<HalfEdgePrimitive> primitives = new ArrayList<>();
+        halfEdgeSceneMaster.extractPrimitives(primitives);
+        for (HalfEdgePrimitive primitive : primitives) {
+            primitive.setMaterialId(materialsCount);
+        }
+
+        // Scissoring the atlas texture****************************************************************
+        halfEdgeSceneMaster.scissorTextures();
+        material = halfEdgeSceneMaster.getMaterials().get(materialsCount);
+        textures = material.getTextures();
+        atlasTextures = textures.get(TextureType.DIFFUSE);
+        GaiaTexture atlasScissoredTexture = atlasTextures.getFirst();
         atlasScissoredTexture.setParentPath(netSetImagesFolderPath.toString());
 
         // save the atlas image to disk
