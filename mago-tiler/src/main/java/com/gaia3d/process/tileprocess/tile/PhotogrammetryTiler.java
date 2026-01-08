@@ -280,6 +280,7 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
         double rootGeometricError = root.getGeometricError();
         if (rootGeometricError < 500.0) {
             rootGeometricError = 500.0;
+            root.setGeometricError(rootGeometricError);
         }
         tileset.setGeometricError(rootGeometricError);
         tileset.setRoot(root);
