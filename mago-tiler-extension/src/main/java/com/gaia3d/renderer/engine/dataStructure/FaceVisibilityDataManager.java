@@ -1,6 +1,7 @@
 package com.gaia3d.renderer.engine.dataStructure;
 
 import com.gaia3d.basic.halfedge.CameraDirectionType;
+import org.joml.Vector3d;
 
 import java.util.Map;
 
@@ -27,6 +28,28 @@ public class FaceVisibilityDataManager {
             if (pixelCount > maxPixelCount) {
                 maxPixelCount = pixelCount;
                 bestCameraDirectionType = entry.getKey();
+            }
+        }
+        return bestCameraDirectionType;
+    }
+
+    public CameraDirectionType getBestCameraDirectionTypeOfFace(int faceId, Vector3d faceNormal) {
+        CameraDirectionType bestCameraDirectionType = null;
+        //double maxPixelCount = 0;
+        double maxDotProduct = 0.0;
+        for (Map.Entry<CameraDirectionType, FaceVisibilityData> entry : faceVisibilityDataMap.entrySet()) {
+            int pixelCount = entry.getValue().getPixelFaceVisibility(faceId);
+            if (pixelCount > 0) {
+                Vector3d invertedFaceNormal = new Vector3d(faceNormal).negate();
+                Vector3d cameraDirection = CameraDirectionType.getCameraDirection(entry.getKey());
+                double dotProduct = invertedFaceNormal.dot(cameraDirection);
+                if (dotProduct > maxDotProduct) {
+                    maxDotProduct = dotProduct;
+
+                    //maxPixelCount = pixelCount * dotProduct;
+                    bestCameraDirectionType = entry.getKey();
+                }
+
             }
         }
         return bestCameraDirectionType;

@@ -746,8 +746,8 @@ class UnitTest {
         // someTiles
 //        "-lon", "126.638872",
 //                "-lat", "37.5329178",
-        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\SangAm_JoGoNi\\Production_2\\L22_1buildings\\";
-        String outputPath = "C:\\data\\mago-server\\output\\SangAm_JoGoNi_L22_1buildings\\";
+        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\SangAm_JoGoNi\\Production_2\\L22_9_buildings\\";
+        String outputPath = "C:\\data\\mago-server\\output\\SangAm_JoGoNi_L22_9_buildings\\";
         //String outputPath = "E:\\temp\\";
 
         String[] args = new String[]{
