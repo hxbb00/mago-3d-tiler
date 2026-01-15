@@ -153,12 +153,14 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
             } else if (d == 1) {
                 //decimateParameters.setBasicValues(9.0, 0.4, 0.9, 40.0, 1000000, 5, 1.0);
                 //decimateParameters.setBasicValues(9.0, 1.0, 0.9, 40.0, 1000000, 5, 1.0);
-                decimateParameters.setBasicValues(5.0, 1.2, 0.9, 40.0, 1000000, 5, 1.0);
+                //decimateParameters.setBasicValues(5.0, 1.2, 0.9, 40.0, 1000000, 5, 1.0);
+                decimateParameters.setBasicValues(14.0, 0.1, 0.9, 40.0, 1000000, 5, 1.0);
                 screenPixelsForMeter = screenPixelsForMeterLod1;
             } else if (d == 2) {
                 //decimateParameters.setBasicValues(12.0, 0.5, 0.9, 40.0, 1000000, 5, 1.5);
                 //decimateParameters.setBasicValues(12.0, 1.8, 0.9, 40.0, 1000000, 5, 1.5);
-                decimateParameters.setBasicValues(9.0, 2.0, 0.9, 40.0, 1000000, 5, 1.5);
+                //decimateParameters.setBasicValues(9.0, 2.0, 0.9, 40.0, 1000000, 5, 1.5);
+                decimateParameters.setBasicValues(22.0, 0.2, 0.9, 40.0, 1000000, 5, 1.5);
                 screenPixelsForMeter = screenPixelsForMeterLod1 / 2.0;
             } else {
                 decimateParameters.setBasicValues(20.0, 0.8, 1.0, 36.0, 1000000, 5, 2.0);
