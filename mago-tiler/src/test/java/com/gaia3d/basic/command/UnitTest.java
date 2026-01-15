@@ -629,8 +629,8 @@ class UnitTest {
 
     @Test
     void test_RealisticMesh_LeeDongHun_Data_SANGCHEON() {
-        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\leeDongHun_Data\\obj\\SANGCHEON\\";
-        String outputPath = "C:\\data\\mago-server\\output\\SANGCHEON\\";
+        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\leeDongHun_Data\\obj\\SANGCHEON_1_buildings\\";
+        String outputPath = "C:\\data\\mago-server\\output\\SANGCHEON_1_buildings\\";
 
         String[] args = new String[]{
                 "-i", inputPath,
@@ -639,7 +639,8 @@ class UnitTest {
                 "-crs", "5187",
                 "-rx", "90",
                 "-pg",
-                "--quantize"
+                "--quantize",
+                "-leaveTemp"
         };
         Mago3DTilerMain.main(args);
     }

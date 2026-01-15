@@ -127,11 +127,11 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
         cuttingAndScissorProcessST(tileInfosCopy, lod, root, cuttedTileInfos, projectMaxDepthIdx); // original
 
         // check if there are repeat tileInfos in cuttedTileInfos
-        Map<Path, Integer> pathCountMap = new HashMap<>();
-        for (TileInfo tileInfo : cuttedTileInfos) {
-            Path tilePath = tileInfo.getTempPath();
-            pathCountMap.put(tilePath, pathCountMap.getOrDefault(tilePath, 0) + 1);
-        }
+//        Map<Path, Integer> pathCountMap = new HashMap<>();
+//        for (TileInfo tileInfo : cuttedTileInfos) {
+//            Path tilePath = tileInfo.getTempPath();
+//            pathCountMap.put(tilePath, pathCountMap.getOrDefault(tilePath, 0) + 1);
+//        }
 
         // distribute contents to node in the correspondent depth
         // After a process "cutRectangleCake", in tileInfosCopy there are tileInfos that are cut by the boundary planes of the nodes

@@ -1755,7 +1755,7 @@ public class Engine {
         GaiaBoundingBox expandedBBox = targetBbox.clone();
         double expandedMaxSize = expandedBBox.getMaxSize();
         //expandedBBox.expand(expandedMaxSize * 0.02);
-        expandedBBox.expand(expandedMaxSize * 4.0); // provisionally large expansion. In integralMode, the targetBbox is centered in the origin.
+        expandedBBox.expand(expandedMaxSize * 100.0); // provisionally large expansion. In integralMode, the targetBbox is centered in the origin.
 
         Vector3d targetBBoxCenter = targetBbox.getCenter();
 
