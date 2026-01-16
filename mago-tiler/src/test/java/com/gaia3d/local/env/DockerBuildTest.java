@@ -62,6 +62,28 @@ class DockerBuildTest {
     }
 
     @Test
+    void runWithProjection() throws IOException {
+        ClassLoader classLoader = getClass().getClassLoader();
+
+        File input = new File(classLoader.getResource("./sample-geojson").getFile());
+        File resource = new File(input.getParent());
+
+        String dockerImage = "gaia3d/mago-3d-tiler:latest";
+        List<String> argList = new ArrayList<>();
+        argList.add("docker");
+        argList.add("run");
+        argList.add("--rm");
+        argList.add("-v");
+        argList.add(resource.getAbsolutePath() + ":/workspace");
+        argList.add(dockerImage);
+        argList.add("--input");
+        argList.add("/workspace/sample-geojson");
+        argList.add("--output");
+        argList.add("/workspace/sample-output");
+        DockerRun.run(argList);
+    }
+
+    @Test
     void runWithSimpleArm64() throws IOException {
         ClassLoader classLoader = getClass().getClassLoader();
 

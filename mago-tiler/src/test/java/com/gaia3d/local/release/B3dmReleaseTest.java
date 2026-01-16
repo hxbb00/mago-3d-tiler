@@ -295,4 +295,76 @@ class B3dmReleaseTest {
         };
         MagoTestConfig.execute(args);
     }
+
+    @Test
+    void batched10() {
+        String path = "B10-seoul-city-gpkg";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-crs", "5186",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void batched10withGeoid() {
+        String path = "B10-seoul-city-gpkg";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-geoid",
+                "-crs", "5186",
+                "-geoid", "EGM96",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void batched10WithTerrainAndGeoid() {
+        String path = "B10-seoul-city-gpkg";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-geoid-terrain",
+                "-crs", "5186",
+                "-terrain", MagoTestConfig.getTerrainPath("dem05-cog.tif").getAbsolutePath(),
+                "-geoid", "EGM96",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void batched10Quad() {
+        String path = "B10-seoul-city-gpkg-quad";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-crs", "5186",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void batched10QuadWithGeoid() {
+        String path = "B10-seoul-city-gpkg-quad";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-geoid",
+                "-crs", "5186",
+                "-geoid", "EGM96",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void batched10QuadWithTerrainAndGeoid() {
+        String path = "B10-seoul-city-gpkg-quad";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-geoid-terrain",
+                "-crs", "5186",
+                "-terrain", MagoTestConfig.getTerrainPath("dem05-cog.tif").getAbsolutePath(),
+                "-geoid", "EGM96",
+        };
+        MagoTestConfig.execute(args);
+    }
 }

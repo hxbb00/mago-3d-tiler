@@ -78,15 +78,25 @@ Usage: command options
  -m, --merge                      Merge tileset.json files
  -i, --input <arg>                [Required] Input directory path
  -o, --output <arg>               [Required] Output directory path
- -it, --inputType <arg>           Input files type [kml, 3ds, fbx, obj, gltf/glb, las/laz, citygml, indoorgml, shp, geojson, gpkg]
+ -t, --temp <arg>                 Temporary directory path
+                                  (default: {OUTPUT}/temp)
+ -it, --inputType <arg>           Input files type
+                                  (options: kml, 3ds, fbx, obj, gltf/glb, las/laz, citygml, indoorgml, shp, geojson, gpkg)
  -ot, --outputType <arg>          Output 3DTiles Type [b3dm, i3dm, pnts]
  -l, --log <arg>                  Output log file path.
  -r, --recursive                  Tree directory deep navigation.
- -te, --terrain <arg>             GeoTiff Terrain file path, 3D Object applied as clampToGround (Supports geotiff format)
- -if, --instance <arg>            Instance file path for I3DM (Default: {OUTPUT}/instance.dae)
+ -te, --terrain <arg>             GeoTiff Terrain file path, 3D Object applied as clampToGround (Supports GeoTIFF format)
+ -ge, --geoid <arg>               Geoid file path for height correction,
+                                  (default: Ellipsoid)(options: Ellipsoid, EGM96 or GeoTIFF File Path)
+ -if, --instance <arg>            Instance file path for I3DM
+                                  (default: {OUTPUT}/instance.dae)
  -qt, --quantize                  Quantize glTF 3DMesh via "KHR_mesh_quantization" Extension
- -c, --crs <arg>                  Coordinate Reference Systems, EPSG Code(4326, 3857, 32652, 5186...)
- -p, --proj <arg>                 Proj4 parameters (ex: +proj=tmerc +la...)
+ -tv, --tilesVersion <arg>        3DTiles Version
+                                  (default: 1.1)(options: 1.0, 1.1)
+ -c, --crs <arg>                  set input data CRS(Coordinate Reference Systems)
+                                  (default: 3857)(options: 4326, 3857, 4978, 32652, 5186...)(ECEF->4978, WGS84->4326, WebMercator->3857
+ -p, --proj <arg>                 Set Proj4 parameters
+                                  (ex: +proj=tmerc +la...)when this option is set, the 'crs' option is ignored.
  -xo, --xOffset <arg>             X Offset value for coordinate transformation
  -yo, --yOffset <arg>             Y Offset value for coordinate transformation
  -zo, --zOffset <arg>             Z Offset value for coordinate transformation
@@ -104,18 +114,26 @@ Usage: command options
  -sp, --sourcePrecision           [PointCloud] Create pointscloud tile with original precision.
  -f4, --force4ByteRGB             [PointCloud] Force 4Byte RGB for pointscloud tile.
  -fc, --flipCoordinate            [GISVector] Flip x, y coordinate for 2D Original Data.
- -af, --attributeFilter <arg>     [GISVector] Attribute filter setting for extrusion model ex) "classification=window,door;type=building"
- -nc, --nameColumn <arg>          [GISVector] Name column setting for extrusion model
- -hc, --heightColumn <arg>        [GISVector] Height column setting for extrusion model
- -ac, --altitudeColumn <arg>      [GISVector] Altitude Column setting for extrusion model
- -hd, --headingColumn <arg>       [GISVector] Heading column setting for I3DM converting
- -scl, --scaleColumn <arg>        [GISVector] Scale column setting for I3DM converting
- -den, --densityColumn <arg>      [GISVector] Density column setting for I3DM polygon converting
- -dc, --diameterColumn <arg>      [GISVector] Diameter column setting for pipe extrusion model, Specify a length unit for Diameter in millimeters(mm) (Default Column: diameter)
- -mh, --minimumHeight <arg>       [GISVector] Minimum height value for extrusion model
- -aa, --absoluteAltitude <arg>    [GISVector] Absolute altitude value for extrusion model
- -sh, --skirtHeight <arg>         [GISVector] Building Skirt height setting for extrusion model
- -tv, --tilesVersion <arg>        [Experimental] 3DTiles Version [1.0, 1.1][Default: 1.1]
+ -af, --attributeFilter <arg>     [GISVector] Attribute filter setting for extrusion model (ex: "classification=window,door;type=building")
+ -nc, --nameColumn <arg>          [GISVector] Specify the column name for the feature name.
+                                  (default: name)
+ -ac, --altitudeColumn <arg>      [GISVector] Specify the column name for the altitude base height.
+                                  (default: altitude)(units: meters)
+ -hd, --headingColumn <arg>       [GISVector][I3DM] Specify the column name for the heading rotation.
+                                  (default: heading)(units: degrees)
+ -scl, --scaleColumn <arg>        [GISVector][I3DM] Specify the column name for the scale value.
+                                  (default: scale)(units: meters)
+ -den, --densityColumn <arg>      [GISVector][I3DM] Specify the column name for the density value.
+                                  (default: density)
+ -dc, --diameterColumn <arg>      [GISVector][Pipe] Specify the column name for the pipe diameter value.
+                                  (default: diameter)(units: millimeters)
+ -hc, --heightColumn <arg>        [GISVector][Extrusion] Specify the column name for the reference ceil level height.
+                                  (default: height)(units: meters)
+ -aa, --absoluteAltitude <arg>    [GISVector] Set absolute altitude value for all features (overrides altitude column)
+ -mh, --minimumHeight <arg>       [GISVector][Extrusion] Set Building Minimum height
+                                  (default: 0.0)(units: meters)
+ -sh, --skirtHeight <arg>         [GISVector][Extrusion] Set Building Skirt height
+                                  (default: 4.0)(units: meters)
  -pg, --photogrammetry            [Experimental] generate b3dm for photogrammetry model with GPU
  -sbn, --splitByNode              [Experimental] Split tiles by nodes of scene.
  -cc, --curvatureCorrection       [Experimental] Apply curvature correction for ellipsoid surface.

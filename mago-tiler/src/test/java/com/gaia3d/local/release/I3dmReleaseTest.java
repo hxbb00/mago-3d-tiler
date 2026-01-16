@@ -190,4 +190,55 @@ class I3dmReleaseTest {
         };
         MagoTestConfig.execute(args);
     }
+
+
+
+    @Test
+    void instanced06add() {
+        String path = "I04-forest-shp";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-add",
+                "-c", "5179",
+                "-it", "gpkg",
+                "-ot", "i3dm",
+                "-refineAdd",
+                "-instance", MagoTestConfig.getInputPath("sample-tree").getAbsolutePath() + "/broad-tree-1m.glb",
+                "-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+                //"-debug"
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void instanced06replace() {
+        String path = "I04-forest-shp";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-replace",
+                "-c", "5179",
+                "-it", "gpkg",
+                "-ot", "i3dm",
+                "-instance", MagoTestConfig.getInputPath("sample-tree").getAbsolutePath() + "/broad-tree-1m.glb",
+                "-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+                //"-debug"
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void instanced06forest() {
+        String path = "I04-forest-shp";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-forest",
+                "-c", "5179",
+                "-it", "gpkg",
+                "-ot", "forest",
+                "-instance", MagoTestConfig.getInputPath("sample-tree").getAbsolutePath() + "/broad-tree-1m.glb",
+                "-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+                //"-debug"
+        };
+        MagoTestConfig.execute(args);
+    }
 }
