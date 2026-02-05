@@ -69,12 +69,6 @@ jar {
         attributes "Implementation-Vendor-Id": "com.gaia3d"
         attributes "Implementation-URL": "http://java.sun.com/products/java-media/jai/forDevelopers/jai-imageio/"
     }
-    from {
-        configurations.runtimeClasspath.collect {
-            it.isDirectory() ? it : zipTree(it)
-        }
-    }
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 import com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer

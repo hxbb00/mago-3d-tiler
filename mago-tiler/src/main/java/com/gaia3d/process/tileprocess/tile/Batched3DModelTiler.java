@@ -241,24 +241,6 @@ public class Batched3DModelTiler extends DefaultTiler implements Tiler {
         int maxLevel = globalOptions.getMaxLod();
         boolean refineAdd = globalOptions.isRefineAdd();
 
-        /*GaiaBoundingBox childBoundingBox = calcCartographicBoundingBox(tileInfos);
-        Matrix4d transformMatrix = getTransformMatrix(childBoundingBox);
-        if (globalOptions.isClassicTransformMatrix()) {
-            rotateX90(transformMatrix);
-        }
-
-
-
-
-        CoordinateReferenceSystem sourceCrs = globalOptions.getCrs();
-        BoundingVolume boundingVolume;
-        if (sourceCrs != null && sourceCrs.getName().equals("EPSG:4978")) {
-            log.info("[INFO] Using EPSG:4978 coordinate system.");
-            boundingVolume = new BoundingVolume(childBoundingBox, BoundingVolume.BoundingVolumeType.BOX);
-        } else {
-            boundingVolume = new BoundingVolume(childBoundingBox, BoundingVolume.BoundingVolumeType.REGION);
-        }*/
-
         BoundingVolume boundingVolume;
         GaiaBoundingBox boundingBox = null;
         Matrix4d transformMatrix = null;
@@ -293,6 +275,10 @@ public class Batched3DModelTiler extends DefaultTiler implements Tiler {
         log.info("[Tile][ContentNode][" + nodeCode + "][LOD{}][OBJECT{}]", lod.getLevel(), tileInfos.size());
 
         int lodError = refineAdd ? lod.getGeometricErrorBlock() : lod.getGeometricError();
+        if (parentNode.getGeometricError() < lodError) {
+            parentNode.setGeometricError(lodError + 0.01);
+            log.debug("[Tile][ContentNode][{}] Adjust Parent Geometric Error : {}", parentNode.getNodeCode(), lodError + 0.01);
+        }
 
         List<TileInfo> resultInfos;
         List<TileInfo> remainInfos;
@@ -310,7 +296,7 @@ public class Batched3DModelTiler extends DefaultTiler implements Tiler {
         childNode.setTransformMatrix(transformMatrix, globalOptions.isClassicTransformMatrix());
         childNode.setBoundingVolume(boundingVolume);
         childNode.setNodeCode(nodeCode);
-        childNode.setGeometricError(lodError + 0.1);
+        childNode.setGeometricError(lodError + 0.01);
         childNode.setChildren(new ArrayList<>());
 
         childNode.setRefine(refineAdd ? Node.RefineType.ADD : Node.RefineType.REPLACE);

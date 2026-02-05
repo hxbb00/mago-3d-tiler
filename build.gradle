@@ -1,6 +1,6 @@
 subprojects {
     group "com.gaia3d"
-    version "1.15.4"
+    version "1.15.6"
     apply plugin: 'java'
     project.ext.lwjglVersion = "3.3.6"
 
@@ -110,7 +110,7 @@ tasks.register('release') {
     dependsOn(':mago-tiler:jib')
 }
 
-tasks.register('javadoc', Javadoc) {
+tasks.register('all-javadoc', Javadoc) {
     group = 'Documentation'
     description = 'Generates Javadoc for mago-3d-tiler module.'
 

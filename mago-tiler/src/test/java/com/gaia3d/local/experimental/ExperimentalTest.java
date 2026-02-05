@@ -11,6 +11,18 @@ import java.io.File;
 public class ExperimentalTest {
 
     @Test
+    void validateShape() {
+        String path = "buld_DJ";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getTempPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-c", "5186",
+                "-tilesVersion", "1.0",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
     void ifcBug() {
         String path = "AC20-FZK-Haus.glb";
         String[] args = new String[]{
@@ -541,6 +553,28 @@ public class ExperimentalTest {
                 "-i", MagoTestConfig.getTempPath(path).getAbsolutePath(),
                 "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
                 //"-c", "32760",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void niaValidation() {
+        String path = "nia-validation";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getTempPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-c", "4326",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void niaValidation5186() {
+        String path = "nia-validation-5186";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getTempPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-c", "5186",
         };
         MagoTestConfig.execute(args);
     }

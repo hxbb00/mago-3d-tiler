@@ -23,6 +23,7 @@ class I3dmReleaseTest {
                 "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
                 "-ot", "i3dm",
                 "-c", "5186",
+                "--tilesVersion", "1.0",
         };
         MagoTestConfig.execute(args);
     }
@@ -186,6 +187,57 @@ class I3dmReleaseTest {
                 "-instance", MagoTestConfig.getInputPath(path).getAbsolutePath() + "/instance.glb",
                 //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
                 "-attributeFilter", "FRTP_NM=침엽수림",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+
+
+    @Test
+    void instanced06add() {
+        String path = "I04-forest-shp";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-add",
+                "-c", "5179",
+                "-it", "gpkg",
+                "-ot", "i3dm",
+                "-refineAdd",
+                "-instance", MagoTestConfig.getInputPath("sample-tree").getAbsolutePath() + "/broad-tree-1m.glb",
+                "-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+                //"-debug"
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void instanced06replace() {
+        String path = "I04-forest-shp";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-replace",
+                "-c", "5179",
+                "-it", "gpkg",
+                "-ot", "i3dm",
+                "-instance", MagoTestConfig.getInputPath("sample-tree").getAbsolutePath() + "/broad-tree-1m.glb",
+                "-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+                //"-debug"
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void instanced06forest() {
+        String path = "I04-forest-shp";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-forest",
+                "-c", "5179",
+                "-it", "gpkg",
+                "-ot", "forest",
+                "-instance", MagoTestConfig.getInputPath("sample-tree").getAbsolutePath() + "/broad-tree-1m.glb",
+                "-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+                //"-debug"
         };
         MagoTestConfig.execute(args);
     }

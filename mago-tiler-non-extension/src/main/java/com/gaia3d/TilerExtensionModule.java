@@ -58,6 +58,12 @@ public class TilerExtensionModule implements ExtensionModuleFrame {
     }
 
     @Override
+    public void integralDecimateByObliqueCamera(List<SceneInfo> sceneInfos, List<HalfEdgeScene> resultHalfEdgeScenes, DecimateParameters decimateParameters, GaiaBoundingBox nodeBBox,
+                                                Matrix4d nodeTMatrix, int maxScreenSize, String outputPathString, String nodeName, int lod) {
+
+    }
+
+    @Override
     public void voxelize(List<GaiaScene> scenes, List<VoxelGrid3D> resultVoxelGrids, List<GaiaScene> resultGaiaScenes, VoxelizeParameters voxelizeParameters) {
     }
 

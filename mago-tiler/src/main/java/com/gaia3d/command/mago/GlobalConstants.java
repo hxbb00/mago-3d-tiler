@@ -50,7 +50,7 @@ public class GlobalConstants {
 
     public static final boolean DEFAULT_USE_QUANTIZATION = false;
     public static final int REALISTIC_LOD0_MAX_TEXTURE_SIZE = 1024;
-    public static final int REALISTIC_MAX_TEXTURE_SIZE = 1024;
+    public static final int REALISTIC_MAX_TEXTURE_SIZE = 512;
     public static final int REALISTIC_MIN_TEXTURE_SIZE = 32;
     public static final int REALISTIC_SCREEN_DEPTH_TEXTURE_SIZE = 256;
     public static final int REALISTIC_SCREEN_COLOR_TEXTURE_SIZE = 1024;

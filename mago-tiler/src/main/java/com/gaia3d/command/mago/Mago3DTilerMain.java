@@ -18,9 +18,10 @@ public class Mago3DTilerMain {
 
     public static void main(String[] args) {
         try {
-            Options options = LoggingConfiguration.createOptions();
-            CommandLineParser parser = new DefaultParser();
-            CommandLine command = parser.parse(options, args);
+            GlobalOptions globalOptions = GlobalOptions.getInstance();
+            CommandLineConfiguration commandLine = globalOptions.getCommandLineConfiguration();
+            Options options = commandLine.createOptions();
+            CommandLine command = commandLine.createCommandLine(options, args);
 
             boolean isHelp = command.hasOption(ProcessOptions.HELP.getLongName());
             boolean isQuiet = command.hasOption(ProcessOptions.QUIET.getLongName());

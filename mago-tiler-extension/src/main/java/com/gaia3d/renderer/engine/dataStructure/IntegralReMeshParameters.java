@@ -66,6 +66,71 @@ public class IntegralReMeshParameters {
         initFbo(colorCodedFbo_YNEG_ZNEG, colorCodeClearColor, true);
     }
 
+    public void createFBOsObliqueCamera9Directions(FboManager fboManager, int fboWidth, int fboHeight) {
+        Fbo colorFbo_ZNEG = fboManager.getOrCreateFbo("ZNEG", fboWidth, fboHeight);
+        Fbo colorFbo_XPOS_ZNEG = fboManager.getOrCreateFbo("XPOS_ZNEG", fboWidth, fboHeight);
+        Fbo colorFbo_XNEG_ZNEG = fboManager.getOrCreateFbo("XNEG_ZNEG", fboWidth, fboHeight);
+        Fbo colorFbo_YPOS_ZNEG = fboManager.getOrCreateFbo("YPOS_ZNEG", fboWidth, fboHeight);
+        Fbo colorFbo_YNEG_ZNEG = fboManager.getOrCreateFbo("YNEG_ZNEG", fboWidth, fboHeight);
+        Fbo colorFbo_XPOS_YPOS_ZNEG = fboManager.getOrCreateFbo("XPOS_YPOS_ZNEG", fboWidth, fboHeight);
+        Fbo colorFbo_XPOS_YNEG_ZNEG = fboManager.getOrCreateFbo("XPOS_YNEG_ZNEG", fboWidth, fboHeight);
+        Fbo colorFbo_XNEG_YPOS_ZNEG = fboManager.getOrCreateFbo("XNEG_YPOS_ZNEG", fboWidth, fboHeight);
+        Fbo colorFbo_XNEG_YNEG_ZNEG = fboManager.getOrCreateFbo("XNEG_YNEG_ZNEG", fboWidth, fboHeight);
+
+        colorFboMap.put("ZNEG", colorFbo_ZNEG);
+        colorFboMap.put("XPOS_ZNEG", colorFbo_XPOS_ZNEG);
+        colorFboMap.put("XNEG_ZNEG", colorFbo_XNEG_ZNEG);
+        colorFboMap.put("YPOS_ZNEG", colorFbo_YPOS_ZNEG);
+        colorFboMap.put("YNEG_ZNEG", colorFbo_YNEG_ZNEG);
+        colorFboMap.put("XPOS_YPOS_ZNEG", colorFbo_XPOS_YPOS_ZNEG);
+        colorFboMap.put("XPOS_YNEG_ZNEG", colorFbo_XPOS_YNEG_ZNEG);
+        colorFboMap.put("XNEG_YPOS_ZNEG", colorFbo_XNEG_YPOS_ZNEG);
+        colorFboMap.put("XNEG_YNEG_ZNEG", colorFbo_XNEG_YNEG_ZNEG);
+
+        Fbo colorCodedFbo_ZNEG = fboManager.getOrCreateFbo("ColorCoded_ZNEG", fboWidth, fboHeight);
+        Fbo colorCodedFbo_XPOS_ZNEG = fboManager.getOrCreateFbo("ColorCoded_XPOS_ZNEG", fboWidth, fboHeight);
+        Fbo colorCodedFbo_XNEG_ZNEG = fboManager.getOrCreateFbo("ColorCoded_XNEG_ZNEG", fboWidth, fboHeight);
+        Fbo colorCodedFbo_YPOS_ZNEG = fboManager.getOrCreateFbo("ColorCoded_YPOS_ZNEG", fboWidth, fboHeight);
+        Fbo colorCodedFbo_YNEG_ZNEG = fboManager.getOrCreateFbo("ColorCoded_YNEG_ZNEG", fboWidth, fboHeight);
+        Fbo colorCodedFbo_XPOS_YPOS_ZNEG = fboManager.getOrCreateFbo("ColorCoded_XPOS_YPOS_ZNEG", fboWidth, fboHeight);
+        Fbo colorCodedFbo_XPOS_YNEG_ZNEG = fboManager.getOrCreateFbo("ColorCoded_XPOS_YNEG_ZNEG", fboWidth, fboHeight);
+        Fbo colorCodedFbo_XNEG_YPOS_ZNEG = fboManager.getOrCreateFbo("ColorCoded_XNEG_YPOS_ZNEG", fboWidth, fboHeight);
+        Fbo colorCodedFbo_XNEG_YNEG_ZNEG = fboManager.getOrCreateFbo("ColorCoded_XNEG_YNEG_ZNEG", fboWidth, fboHeight);
+
+        colorCodeFboMap.put("ZNEG", colorCodedFbo_ZNEG);
+        colorCodeFboMap.put("XPOS_ZNEG", colorCodedFbo_XPOS_ZNEG);
+        colorCodeFboMap.put("XNEG_ZNEG", colorCodedFbo_XNEG_ZNEG);
+        colorCodeFboMap.put("YPOS_ZNEG", colorCodedFbo_YPOS_ZNEG);
+        colorCodeFboMap.put("YNEG_ZNEG", colorCodedFbo_YNEG_ZNEG);
+        colorCodeFboMap.put("XPOS_YPOS_ZNEG", colorCodedFbo_XPOS_YPOS_ZNEG);
+        colorCodeFboMap.put("XPOS_YNEG_ZNEG", colorCodedFbo_XPOS_YNEG_ZNEG);
+        colorCodeFboMap.put("XNEG_YPOS_ZNEG", colorCodedFbo_XNEG_YPOS_ZNEG);
+        colorCodeFboMap.put("XNEG_YNEG_ZNEG", colorCodedFbo_XNEG_YNEG_ZNEG);
+
+        // initialize the fbos
+        Vector4f clearColor = backgroundColor;
+        initFbo(colorFbo_ZNEG, clearColor, true);
+        initFbo(colorFbo_XPOS_ZNEG, clearColor, true);
+        initFbo(colorFbo_XNEG_ZNEG, clearColor, true);
+        initFbo(colorFbo_YPOS_ZNEG, clearColor, true);
+        initFbo(colorFbo_YNEG_ZNEG, clearColor, true);
+        initFbo(colorFbo_XPOS_YPOS_ZNEG, clearColor, true);
+        initFbo(colorFbo_XPOS_YNEG_ZNEG, clearColor, true);
+        initFbo(colorFbo_XNEG_YPOS_ZNEG, clearColor, true);
+        initFbo(colorFbo_XNEG_YNEG_ZNEG, clearColor, true);
+
+        Vector4f colorCodeClearColor = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+        initFbo(colorCodedFbo_ZNEG, colorCodeClearColor, true);
+        initFbo(colorCodedFbo_XPOS_ZNEG, colorCodeClearColor, true);
+        initFbo(colorCodedFbo_XNEG_ZNEG, colorCodeClearColor, true);
+        initFbo(colorCodedFbo_YPOS_ZNEG, colorCodeClearColor, true);
+        initFbo(colorCodedFbo_YNEG_ZNEG, colorCodeClearColor, true);
+        initFbo(colorCodedFbo_XPOS_YPOS_ZNEG, colorCodeClearColor, true);
+        initFbo(colorCodedFbo_XPOS_YNEG_ZNEG, colorCodeClearColor, true);
+        initFbo(colorCodedFbo_XNEG_YPOS_ZNEG, colorCodeClearColor, true);
+        initFbo(colorCodedFbo_XNEG_YNEG_ZNEG, colorCodeClearColor, true);
+    }
+
     private void initFbo(Fbo fbo, Vector4f clearColor, boolean clearDepth) {
         fbo.bind();
 

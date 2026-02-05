@@ -124,4 +124,162 @@ public class ForestExperimentalTest {
         };
         MagoTestConfig.execute(args);
     }
+
+
+
+
+
+
+
+    /*
+        Forest-DT-2500ha test cases
+     */
+    @Test
+    void forestDT2026Add() {
+        String path = "Forest-DT-2500ha";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-Added",
+                "-c", "5186",
+                "-ot", "i3dm",
+                "-it", "gpkg",
+                "--refineAdd",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath(path).getAbsolutePath() + "/instance.glb",
+                //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void forestDT2026Replace() {
+        String path = "Forest-DT-2500ha";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-Replaced",
+                "-c", "5186",
+                "-ot", "i3dm",
+                "-it", "gpkg",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath(path).getAbsolutePath() + "/instance.glb",
+                //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void forestDT2026Mixed() {
+        String path = "Forest-DT-2500ha";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-Mixed",
+                "-c", "5186",
+                "-ot", "forest",
+                "-it", "gpkg",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath(path).getAbsolutePath() + "/instance.glb",
+                //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void forestDT625Add() {
+        String path = "Forest-DT-625ha";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-Added",
+                "-c", "5186",
+                "-ot", "i3dm",
+                "-it", "gpkg",
+                "--refineAdd",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath(path).getAbsolutePath() + "/instance.glb",
+                //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void forestDT625Replace() {
+        String path = "Forest-DT-625ha";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-Replaced",
+                "-c", "5186",
+                "-ot", "i3dm",
+                "-it", "gpkg",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath(path).getAbsolutePath() + "/instance.glb",
+                //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void forestDT625Mixed() {
+        String path = "Forest-DT-625ha";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-Mixed",
+                "-c", "5186",
+                "-ot", "forest",
+                "-it", "gpkg",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath(path).getAbsolutePath() + "/instance.glb",
+                //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+
+
+    @Test
+    void forestDT250Add() {
+        String path = "Forest-DT-250ha";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-Added",
+                "-c", "5186",
+                "-ot", "i3dm",
+                "-it", "gpkg",
+                "--refineAdd",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath(path).getAbsolutePath() + "/instance.glb",
+                //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void forestDT250Replace() {
+        String path = "Forest-DT-250ha";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-Replaced",
+                "-c", "5186",
+                "-ot", "i3dm",
+                "-it", "gpkg",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath(path).getAbsolutePath() + "/instance.glb",
+                //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void forestDT250Mixed() {
+        String path = "Forest-DT-250ha";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath() + "-Mixed",
+                "-c", "5186",
+                "-ot", "forest",
+                "-it", "gpkg",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath(path).getAbsolutePath() + "/instance.glb",
+                //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
 }

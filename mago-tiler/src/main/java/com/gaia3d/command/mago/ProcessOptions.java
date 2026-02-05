@@ -15,21 +15,26 @@ public enum ProcessOptions {
     /* Path Options */
     INPUT_PATH("input", "i", true, true, "[Required] Input directory path"),
     OUTPUT_PATH("output", "o", true, true, "[Required] Output directory path"),
-    TEMP_PATH("temp", "t", true, false, "Temporary directory path (Default: {OUTPUT}/temp)"),
-    INPUT_TYPE("inputType", "it", true, false, "Input files type [kml, 3ds, fbx, obj, gltf/glb, las/laz, citygml, indoorgml, shp, geojson, gpkg]"),
+    TEMP_PATH("temp", "t", true, false, "Temporary directory path \n(default: {OUTPUT}/temp)"),
+    INPUT_TYPE("inputType", "it", true, false, "Input files type \n(options: kml, 3ds, fbx, obj, gltf/glb, las/laz, citygml, indoorgml, shp, geojson, gpkg)"),
     OUTPUT_TYPE("outputType", "ot", true, false, "Output 3DTiles Type [b3dm, i3dm, pnts]"),
     LOG_PATH("log", "l", true, false, "Output log file path."),
     RECURSIVE("recursive", "r", false, false, "Tree directory deep navigation."),
 
     TERRAIN_PATH("terrain", "te", true, false, "GeoTiff Terrain file path, 3D Object applied as clampToGround (Supports GeoTIFF format)"),
-    GEOID_PATH("geoid", "ge", true, false, "Geoid file path for height correction, (Default: Ellipsoid)(\"Ellipsoid\", \"EGM96\" or GeoTIFF File Path)"),
-    INSTANCE_PATH("instance", "if", true, false, "Instance file path for I3DM (Default: {OUTPUT}/instance.dae)"),
+    GEOID_PATH("geoid", "ge", true, false, "Geoid file path for height correction, \n(default: Ellipsoid)(options: Ellipsoid, EGM96 or GeoTIFF File Path)"),
+    INSTANCE_PATH("instance", "if", true, false, "Instance file path for I3DM \n(default: {OUTPUT}/instance.dae)"),
 
     MESH_QUANTIZATION("quantize", "qt", false, false, "Quantize glTF 3DMesh via \"KHR_mesh_quantization\" Extension"),
+    TILES_VERSION("tilesVersion", "tv", true, false, "3DTiles Version \n(default: 1.1)(options: 1.0, 1.1)"),
 
     /* Coordinate Setting Options */
-    CRS("crs", "c", true, false, "Coordinate Reference Systems, EPSG Code(4326, 3857, 32652, 5186...)"),
-    PROJ4("proj", "p", true, false, "Proj4 parameters (ex: +proj=tmerc +la...)"),
+    CRS("crs", "c", true, false, "set input data CRS(Coordinate Reference Systems) \n " +
+            "(default: 3857)(options: 4326, 3857, 4978, 32652, 5186...)" +
+            "(ECEF->4978, WGS84->4326, WebMercator->3857"),
+    PROJ4("proj", "p", true, false, "Set Proj4 parameters " +
+            "\n (ex: +proj=tmerc +la...)" +
+            "when this option is set, the 'crs' option is ignored."),
     X_OFFSET("xOffset", "xo", true, false, "X Offset value for coordinate transformation"),
     Y_OFFSET("yOffset", "yo", true, false, "Y Offset value for coordinate transformation"),
     Z_OFFSET("zOffset", "zo", true, false, "Z Offset value for coordinate transformation"),
@@ -69,22 +74,21 @@ public enum ProcessOptions {
 
     /* GIS Vector Generate Options */
     FLIP_COORDINATE("flipCoordinate", "fc", false, false, "[GISVector] Flip x, y coordinate for 2D Original Data."),
-    ATTRIBUTE_FILTER("attributeFilter", "af", true, false, "[GISVector] Attribute filter setting for extrusion model ex) \"classification=window,door;type=building\""),
+    ATTRIBUTE_FILTER("attributeFilter", "af", true, false, "[GISVector] Attribute filter setting for extrusion model (ex: \"classification=window,door;type=building\")"),
     // GIS Vector Column Options
-    NAME_COLUMN("nameColumn", "nc", true, false, "[GISVector] Name column setting for extrusion model"),
-    HEIGHT_COLUMN("heightColumn", "hc", true, false, "[GISVector] Height column setting for extrusion model"),
-    ALTITUDE_COLUMN("altitudeColumn", "ac", true, false, "[GISVector] Altitude Column setting for extrusion model"),
-    HEADING_COLUMN("headingColumn", "hd", true, false, "[GISVector] Heading column setting for I3DM converting"),
-    SCALE_COLUMN("scaleColumn", "scl", true, false, "[GISVector] Scale column setting for I3DM converting"),
-    DENSITY_COLUMN("densityColumn", "den", true, false, "[GISVector] Density column setting for I3DM polygon converting"),
-    DIAMETER_COLUMN("diameterColumn", "dc", true, false, "[GISVector] Diameter column setting for pipe extrusion model, Specify a length unit for Diameter in millimeters(mm) (Default Column: diameter)"),
-    // EXTRUSION Options
-    MINIMUM_HEIGHT("minimumHeight", "mh", true, false, "[GISVector] Minimum height value for extrusion model"),
-    ABSOLUTE_ALTITUDE("absoluteAltitude", "aa", true, false, "[GISVector] Absolute altitude value for extrusion model"),
-    SKIRT_HEIGHT("skirtHeight", "sh", true, false, "[GISVector] Building Skirt height setting for extrusion model"),
+    NAME_COLUMN("nameColumn", "nc", true, false, "[GISVector] Specify the column name for the feature name. \n (default: name)"),
+    ALTITUDE_COLUMN("altitudeColumn", "ac", true, false, "[GISVector] Specify the column name for the altitude base height. \n (default: altitude)(units: meters)"),
+    HEADING_COLUMN("headingColumn", "hd", true, false, "[GISVector][I3DM] Specify the column name for the heading rotation. \n (default: heading)(units: degrees)"),
+    SCALE_COLUMN("scaleColumn", "scl", true, false, "[GISVector][I3DM] Specify the column name for the scale value. \n (default: scale)(units: meters)"),
+    DENSITY_COLUMN("densityColumn", "den", true, false, "[GISVector][I3DM] Specify the column name for the density value. \n (default: density)"),
+    DIAMETER_COLUMN("diameterColumn", "dc", true, false, "[GISVector][Pipe] Specify the column name for the pipe diameter value. \n (default: diameter)(units: millimeters)"),
+    HEIGHT_COLUMN("heightColumn", "hc", true, false, "[GISVector][Extrusion] Specify the column name for the reference ceil level height. \n (default: height)(units: meters)"),
+    // Height Options
+    ABSOLUTE_ALTITUDE("absoluteAltitude", "aa", true, false, "[GISVector] Set absolute altitude value for all features (overrides altitude column)"),
+    MINIMUM_HEIGHT("minimumHeight", "mh", true, false, "[GISVector][Extrusion] Set Building Minimum height \n(default: 0.0)(units: meters)"),
+    SKIRT_HEIGHT("skirtHeight", "sh", true, false, "[GISVector][Extrusion] Set Building Skirt height \n(default: 4.0)(units: meters)"),
 
     /* Experimental Options */
-    TILES_VERSION("tilesVersion", "tv", true, false, "[Experimental] 3DTiles Version [1.0, 1.1][Default: 1.1]"),
     PHOTOGRAMMETRY("photogrammetry", "pg", false, false, "[Experimental] generate b3dm for photogrammetry model with GPU"),
     SPLIT_BY_NODE("splitByNode", "sbn", false, false, "[Experimental] Split tiles by nodes of scene."),
     CURVATURE_CORRECTION("curvatureCorrection", "cc", false, false, "[Experimental] Apply curvature correction for ellipsoid surface."),

@@ -11,6 +11,7 @@ import com.gaia3d.process.postprocess.ContentModel;
 import com.gaia3d.process.postprocess.instance.GaiaFeatureTable;
 import com.gaia3d.process.tileprocess.tile.ContentInfo;
 import com.gaia3d.process.tileprocess.tile.TileInfo;
+import com.gaia3d.util.GaiaSceneUtils;
 import com.gaia3d.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.joml.Matrix3d;
@@ -85,7 +86,7 @@ public class Batched3DModelV2 implements ContentModel {
             Matrix4d sceneTransformMatrix = rootNode.getTransformMatrix();
             rotationMatrix4d.mul(sceneTransformMatrix, sceneTransformMatrix);
 
-            double[] rtcCenter = new double[3];
+            Double[] rtcCenter = new Double[3];
             rtcCenter[0] = worldTransformMatrix.m30();
             rtcCenter[1] = worldTransformMatrix.m31();
             rtcCenter[2] = worldTransformMatrix.m32();
@@ -132,8 +133,7 @@ public class Batched3DModelV2 implements ContentModel {
             attributes.forEach((key, value) -> {
                 String utf8Value = StringUtils.convertUTF8(value);
                 batchTableMap.computeIfAbsent(key, k -> new ArrayList<>());
-                batchTableMap.get(key)
-                        .add(utf8Value);
+                batchTableMap.get(key).add(utf8Value);
             });
         });
 
@@ -142,6 +142,7 @@ public class Batched3DModelV2 implements ContentModel {
         if (globalOptions.isPhotogrammetry()) {
             scene.deleteNormals();
         }
+
         this.gltfWriter.writeGlb(scene, glbOutputFile, featureTable, batchTableMap);
         return contentInfo;
     }
