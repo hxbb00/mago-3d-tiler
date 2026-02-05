@@ -15,4 +15,5 @@ public class DefaultCommandLineConfiguration implements CommandLineConfiguration
         CommandLineParser parser = new DefaultParser();
         return parser.parse(options, args);
     }
+
 }

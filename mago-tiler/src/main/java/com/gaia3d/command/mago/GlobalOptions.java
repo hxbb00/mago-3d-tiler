@@ -31,6 +31,7 @@ import java.util.List;
 public class GlobalOptions {
     private static GlobalOptions instance = new GlobalOptions();
     private CommandLineConfiguration commandLineConfiguration = new DefaultCommandLineConfiguration();
+    private CommandLine commandLine = null;
 
     private boolean isParametric = false;
 
@@ -143,6 +144,7 @@ public class GlobalOptions {
     }
 
     public static void init(CommandLine command) throws IOException, RuntimeException {
+        instance.setCommandLine(command);
 
         if (command == null) {
             throw new IllegalArgumentException("Command line argument is null.");
@@ -486,6 +488,7 @@ public class GlobalOptions {
     public long getProcessTimeMillis() {
         long endTimeMillis = System.currentTimeMillis();
         long processTimeMillis = endTimeMillis - startTimeMillis;
+        this.endTimeMillis = endTimeMillis;
         return processTimeMillis;
     }
 
