@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -72,7 +73,7 @@ public class TilingPipeline implements Pipeline {
 
     private void executePreProcesses(FileLoader fileLoader) throws InterruptedException {
         log.info("[Pre] Start the pre-processing.");
-        tileInfos = new ArrayList<>();
+        tileInfos = Collections.synchronizedList(new ArrayList<>());
 
         ExecutorService executorService = Executors.newFixedThreadPool(globalOptions.getMultiThreadCount());
         List<Runnable> tasks = new ArrayList<>();
@@ -158,7 +159,6 @@ public class TilingPipeline implements Pipeline {
                                     .transformMatrix(childTileInfo.getTransformMatrix())
                                     .boundingBox(childTileInfo.getBoundingBox())
                                     .pointCloud(childTileInfo.getPointCloud())
-                                    /*.pointCloudOld(childTileInfo.getPointCloudOld())*/
                                     .build())
                             .collect(Collectors.toList());
                     contentInfo.setTileInfos(tileInfosClone);
