@@ -578,4 +578,29 @@ public class ExperimentalTest {
         };
         MagoTestConfig.execute(args);
     }
+
+    @Test
+    void convert20260203IcywaYLas() {
+        String path = "20260203-ICYWAY-LAS";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getTempPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-c", "5186",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void convertThailandKhonKaenRealisticMesh() {
+        String path = "thailand-khonkaen-realistic-mesh";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getTempPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-crs", "32648",
+                "-xOffset", "268943",
+                "-yOffset", "1818915",
+                "-pg",
+        };
+        MagoTestConfig.execute(args);
+    }
 }
