@@ -22,10 +22,6 @@ import java.util.Map;
 @Setter
 public class TilesetV2 extends Tileset {
     private AssetV1 asset;
-    @JsonInclude(JsonInclude.Include.USE_DEFAULTS)
-    private double geometricError = 0.0d;
-    private Node root;
-    private Properties properties;
 
     private List<String> extensionsUsed = new ArrayList<>();
     private List<String> extensionsRequired = new ArrayList<>();
@@ -34,7 +30,6 @@ public class TilesetV2 extends Tileset {
     public TilesetV2() {
         this.asset = new AssetV1();
         this.asset.setVersion("1.1");
-
         // Add 3DTILES_content_gltf extension
         //String extensionName = ExtensionConstant.EX_3DTILES_CONTENT_GLTF.getExtensionName();
         //this.extensionsUsed.add(extensionName);
