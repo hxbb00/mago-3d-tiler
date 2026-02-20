@@ -179,6 +179,7 @@ class RealisticReleaseTest {
         MagoTestConfig.execute(args);
     }
 
+
     private void execute(String[] args) {
         Mago3DTilerMain.main(args);
     }
