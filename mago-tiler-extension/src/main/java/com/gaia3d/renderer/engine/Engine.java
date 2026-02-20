@@ -502,7 +502,7 @@ public class Engine {
         int count = 0;
         boolean testBool = false;
         for (Map.Entry<Integer, List<HalfEdgeFace>> entry : facesClassificationMap.entrySet()) {
-            log.info("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
+            log.debug("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
 
             int classificationId = entry.getKey();
             List<HalfEdgeFace> facesList = entry.getValue();
@@ -607,7 +607,7 @@ public class Engine {
         int count = 0;
         boolean testBool = false;
         for (Map.Entry<Integer, List<HalfEdgeFace>> entry : facesClassificationMap.entrySet()) {
-            log.info("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
+            log.debug("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
 
             int classificationId = entry.getKey();
             List<HalfEdgeFace> facesList = entry.getValue();
@@ -719,7 +719,7 @@ public class Engine {
         int count = 0;
         boolean testBool = false;
         for (Map.Entry<Integer, List<HalfEdgeFace>> entry : facesClassificationMap.entrySet()) {
-            log.info("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
+            log.debug("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
             FaceVisibilityDataManager faceVisibilityDataManager = new FaceVisibilityDataManager();
             int classificationId = entry.getKey();
             List<HalfEdgeFace> facesList = entry.getValue();

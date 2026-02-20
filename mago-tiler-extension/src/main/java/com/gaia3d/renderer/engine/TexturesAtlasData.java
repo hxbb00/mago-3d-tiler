@@ -10,9 +10,8 @@ import lombok.Setter;
 
 import java.awt.image.BufferedImage;
 
-@Setter
 @Getter
-
+@Setter
 public class TexturesAtlasData {
     private int classifyId = -1;
     private PlaneType planeType = PlaneType.UNKNOWN;

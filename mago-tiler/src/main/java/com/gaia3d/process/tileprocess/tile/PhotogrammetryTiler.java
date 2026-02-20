@@ -797,7 +797,7 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
             GaiaBoundingBox nodeBBoxLC = node.calculateLocalBoundingBox();
             //GaiaBoundingBox nodeCartographicBBox = node.calculateCartographicBoundingBox();
 
-            log.info("nodeCode : " + node.getNodeCode() + " currNodeIdx : " + i + " / " + nodesCount);
+            log.debug("nodeCode : " + node.getNodeCode() + " currNodeIdx : " + i + " / " + nodesCount);
             int maxScreenSize = 512;
 
             List<HalfEdgeScene> resultHalfEdgeScenes = new ArrayList<>();

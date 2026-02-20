@@ -628,7 +628,7 @@ public class MainVoxelizer implements IAppLogic {
 
             try {
                 // render the scene
-                log.info("Rendering the scene : " + i + " / " + scenesCount + ". LOD : " + lod);
+                log.debug("Rendering the scene : " + i + " / " + scenesCount + ". LOD : " + lod);
 
                 // for each gaiaScene, set the available faceIds, to use for colorCoded rendering
                 GaiaExtractor extractor = new GaiaExtractor();
@@ -892,7 +892,7 @@ public class MainVoxelizer implements IAppLogic {
 
             try {
                 // render the scene
-                log.info("Rendering the scene : " + i + " / " + scenesCount + ". LOD : " + lod);
+                log.debug("Rendering the scene : " + i + " / " + scenesCount + ". LOD : " + lod);
 
                 // for each gaiaScene, set the available faceIds, to use for colorCoded rendering
                 List<HalfEdgeSurface> halfEdgeSurfaces = halfEdgeScene.extractSurfaces(null);

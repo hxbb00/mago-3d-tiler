@@ -107,11 +107,11 @@ public class Camera {
         this.direction = camDirection;
         Vector3d currDir = new Vector3d(this.direction);
         this.up = new Vector3d(0, 0, 1);
-        currDir.cross(this.up); // dir cross up = right
+        currDir.cross(this.up);
         currDir.normalize();
         this.right = currDir;
         Vector3d currRight = new Vector3d(this.right);
-        currRight.cross(this.direction); // right cross dir = up
+        currRight.cross(this.direction);
         currRight.normalize();
         this.up = currRight;
         this.dirty = true;
@@ -174,7 +174,6 @@ public class Camera {
     }
 
     public Vector3d calculateUpVector(Vector3d direction) {
-        // check if the direction is perpendicular to the z axis
         Vector3d zAxis = new Vector3d(0, 0, 1);
         if (Math.abs(direction.dot(zAxis)) > 0.9999) {
             return new Vector3d(0, 1, 0);

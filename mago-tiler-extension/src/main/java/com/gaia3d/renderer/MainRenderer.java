@@ -515,7 +515,7 @@ public class MainRenderer implements IAppLogic {
 
                 glViewport(0, 0, width[0], height[0]);
                 colorFbo.bind();
-                log.info("Rendering the scene : " + i + " of scenesCount : " + scenesCount);
+                log.debug("Rendering the scene : " + i + " of scenesCount : " + scenesCount);
                 engine.getRenderSceneImage(sceneShaderProgram);
                 colorFbo.unbind();
 

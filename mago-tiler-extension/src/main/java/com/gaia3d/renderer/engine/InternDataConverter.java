@@ -31,8 +31,7 @@ public class InternDataConverter {
         // materials
         List<GaiaMaterial> materials = gaiaScene.getMaterials();
         List<GaiaMaterial> newMaterials = new ArrayList<>();
-        for (int i = 0; i < materials.size(); i++) {
-            GaiaMaterial material = materials.get(i);
+        for (GaiaMaterial material : materials) {
             GaiaMaterial newMaterial = material.clone();
             newMaterials.add(newMaterial);
         }
@@ -64,8 +63,7 @@ public class InternDataConverter {
 
         List<GaiaMesh> meshes = gaiaNode.getMeshes();
         int meshesCount = meshes.size();
-        for (int i = 0; i < meshesCount; i++) {
-            GaiaMesh gaiaMesh = meshes.get(i);
+        for (GaiaMesh gaiaMesh : meshes) {
             RenderableMesh renderableMesh = getRenderableMesh(gaiaMesh, transformMatrix, scene, parentRenderableGaiaScene);
             renderableNode.addRenderableMesh(renderableMesh);
         }
@@ -73,8 +71,7 @@ public class InternDataConverter {
         // check for children.
         List<GaiaNode> children = gaiaNode.getChildren();
         int childrenCount = children.size();
-        for (int i = 0; i < childrenCount; i++) {
-            GaiaNode child = children.get(i);
+        for (GaiaNode child : children) {
             RenderableNode renderableChildNode = getRenderableNode(child, transformMatrix, scene, parentRenderableGaiaScene);
             renderableChildNode.setParent(renderableNode);
             renderableNode.addChild(renderableChildNode);
@@ -88,10 +85,7 @@ public class InternDataConverter {
         renderableMesh.setOriginalGaiaMesh(gaiaMesh);
 
         List<GaiaPrimitive> primitives = gaiaMesh.getPrimitives();
-        int primitivesCount = primitives.size();
-
-        for (int i = 0; i < primitivesCount; i++) {
-            GaiaPrimitive gaiaPrimitive = primitives.get(i);
+        for (GaiaPrimitive gaiaPrimitive : primitives) {
             GaiaBufferDataSet bufferDataSet = gaiaPrimitive.toGaiaBufferSet(transformMatrix);
             bufferDataSet.setMaterialId(gaiaPrimitive.getMaterialIndex());
             RenderablePrimitive renderablePrimitive = getRenderablePrimitive(gaiaPrimitive, bufferDataSet, scene, parentRenderableGaiaScene);
@@ -117,7 +111,7 @@ public class InternDataConverter {
             GaiaMaterial material = null;
 
             if (matId >= 0) {
-                material = parentRenderableGaiaScene.getMaterials().stream().filter((materialToFind) -> materialToFind.getId() == matId).findFirst().orElseThrow();;
+                material = parentRenderableGaiaScene.getMaterials().stream().filter((materialToFind) -> materialToFind.getId() == matId).findFirst().orElseThrow();
             }
 
             renderablePrimitive.setMaterial(material);
@@ -136,7 +130,6 @@ public class InternDataConverter {
         int glTarget = buffer.getGlTarget();
 
         renderableBuffer = new RenderableBuffer(attributeType, elemsCount, glDimension, glType, glTarget);
-
 
         if (attributeType == AttributeType.POSITION) {
             float[] positions = buffer.getFloats();
@@ -159,7 +152,7 @@ public class InternDataConverter {
                 GL20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vboId[0]);
                 GL20.glBufferData(GL20.GL_ARRAY_BUFFER, normals, GL20.GL_STATIC_DRAW);
             } else if (glType == GL20.GL_SHORT || glType == GL20.GL_UNSIGNED_SHORT) {
-                // TODO :
+                throw new UnsupportedOperationException("Short type normal buffer is not supported yet.");
             } else if (glType == GL20.GL_BYTE || glType == GL20.GL_UNSIGNED_BYTE) {
                 byte[] normals = buffer.getBytes();
                 GL20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vboId[0]);
@@ -178,7 +171,7 @@ public class InternDataConverter {
                 GL20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vboId[0]);
                 GL20.glBufferData(GL20.GL_ARRAY_BUFFER, texcoords, GL20.GL_STATIC_DRAW);
             } else if (glType == GL20.GL_SHORT || glType == GL20.GL_UNSIGNED_SHORT) {
-                // TODO :
+                throw new UnsupportedOperationException("Short type texcoord buffer is not supported yet.");
             } else if (glType == GL20.GL_BYTE || glType == GL20.GL_UNSIGNED_BYTE) {
                 byte[] texcoords = buffer.getBytes();
                 GL20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vboId[0]);
@@ -197,7 +190,7 @@ public class InternDataConverter {
                 GL20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vboId[0]);
                 GL20.glBufferData(GL20.GL_ARRAY_BUFFER, colors, GL20.GL_STATIC_DRAW);
             } else if (glType == GL20.GL_SHORT || glType == GL20.GL_UNSIGNED_SHORT) {
-                // TODO :
+                throw new UnsupportedOperationException("Short type color buffer is not supported yet.");
             } else if (glType == GL20.GL_BYTE || glType == GL20.GL_UNSIGNED_BYTE) {
                 byte[] colors = buffer.getBytes();
                 ByteBuffer byteBuffer = BufferUtils.createByteBuffer(colors.length);

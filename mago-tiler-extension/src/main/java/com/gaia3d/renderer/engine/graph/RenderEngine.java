@@ -31,7 +31,7 @@ import static org.lwjgl.opengl.GL11.*;
 public class RenderEngine {
     private RenderableBasicAxis renderableBasicAxis;
     private boolean renderWireFrame = false;
-    private int colorMode = 2; // 0 = oneColor, 1 = vertexColor, 2 = textureColor
+    private int colorMode = 2; // 0:oneColor, 1:vertexColor, 2:textureColor
 
     public RenderEngine() {
         renderableBasicAxis = new RenderableBasicAxis();

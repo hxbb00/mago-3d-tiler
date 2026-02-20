@@ -19,7 +19,6 @@ import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL20;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -83,16 +82,16 @@ public class EngineVoxelizer {
     }
 
     public void deleteObjects() {
-        if(fboManager != null) {
+        if (fboManager != null) {
             fboManager.deleteAllFbos();
         }
-        if(screenQuad != null) {
+        if (screenQuad != null) {
             screenQuad.cleanup();
         }
-        if(shaderManager != null) {
+        if (shaderManager != null) {
             shaderManager.deleteAllShaderPrograms();
         }
-        if(window != null) {
+        if (window != null) {
             window.cleanup();
         }
     }
@@ -175,7 +174,6 @@ public class EngineVoxelizer {
                 gaiaScenesContainer.getProjection().setProjectionType(0);
             }
 
-
             float rotationOffset = 0.1f;
             Vector3d pivot = new Vector3d(0.0d, 0.0d, -1.0d);
 
@@ -202,7 +200,6 @@ public class EngineVoxelizer {
         if (renderer == null) {
             renderer = new RenderEngine();
         }
-
 
         if (camera == null) {
             camera = new Camera();
@@ -234,7 +231,8 @@ public class EngineVoxelizer {
         try {
             bytes = resourceAsStream.readAllBytes();
         } catch (IOException e) {
-            log.error("[ERROR] Error reading resource: {}", e);
+            log.error("[ERROR] Error reading resource:", e);
+            return null;
         }
         return new String(bytes, StandardCharsets.UTF_8);
     }
@@ -243,16 +241,7 @@ public class EngineVoxelizer {
         shaderManager = new ShaderManager();
 
         GL.createCapabilities();
-
         URL url = getClass().getClassLoader().getResource("shaders");
-        File shaderFolder = new File(url.getPath());
-
-        //log.info("shaderFolder: {}", shaderFolder.getAbsolutePath());
-
-
-//        log.info("vertexShaderText: {}", vertexShaderText);
-//        log.info("fragmentShaderText: {}", fragmentShaderText);
-
         // create a scene shader program
         String vertexShaderText = readResource("shaders/sceneV330.vert");
         String fragmentShaderText = readResource("shaders/sceneV330.frag");
@@ -260,7 +249,6 @@ public class EngineVoxelizer {
         shaderModuleDataList.add(new ShaderProgram.ShaderModuleData(vertexShaderText, GL20.GL_VERTEX_SHADER));
         shaderModuleDataList.add(new ShaderProgram.ShaderModuleData(fragmentShaderText, GL20.GL_FRAGMENT_SHADER));
         ShaderProgram sceneShaderProgram = shaderManager.createShaderProgram("scene", shaderModuleDataList);
-
 
         java.util.List<String> uniformNames = new ArrayList<>();
         uniformNames.add("uProjectionMatrix");

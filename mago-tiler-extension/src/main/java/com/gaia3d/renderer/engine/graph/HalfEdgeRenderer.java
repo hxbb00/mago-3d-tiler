@@ -134,7 +134,6 @@ public class HalfEdgeRenderer {
 
         UniformsMap uniformsMap = shaderProgram.getUniformsMap();
 
-
         if (this.colorMode == 0) {
             uniformsMap.setUniform1i("uColorMode", 0);
             uniformsMap.setUniform4fv("uOneColor", new Vector4f(0.9f, 0.3f, 0.6f, 1.0f));
@@ -184,7 +183,6 @@ public class HalfEdgeRenderer {
 //            // render the 1rst point of the primitive
 //            GL20.glPointSize(10.0f);
 //            GL20.glDrawArrays(GL20.GL_POINTS, 0, 1);
-
 
         // return polygonMode to fill
         GL20.glPolygonMode(GL20.GL_FRONT_AND_BACK, GL20.GL_FILL);

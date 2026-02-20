@@ -32,8 +32,7 @@ public class FboMRT {
             colorTextureIds[i] = GL30.glGenTextures();
             GL30.glBindTexture(GL30.GL_TEXTURE_2D, colorTextureIds[i]);
 
-            GL30.glTexImage2D(GL30.GL_TEXTURE_2D, 0, GL30.GL_RGBA, fboWidth, fboHeight, 0,
-                    GL30.GL_RGBA, GL30.GL_UNSIGNED_BYTE, (ByteBuffer) null);
+            GL30.glTexImage2D(GL30.GL_TEXTURE_2D, 0, GL30.GL_RGBA, fboWidth, fboHeight, 0, GL30.GL_RGBA, GL30.GL_UNSIGNED_BYTE, (ByteBuffer) null);
 
             GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_WRAP_S, GL30.GL_CLAMP_TO_EDGE);
             GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_WRAP_T, GL30.GL_CLAMP_TO_EDGE);
@@ -41,8 +40,7 @@ public class FboMRT {
             GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_MAG_FILTER, GL30.GL_NEAREST);
 
             // Attach texture to FBO
-            GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0 + i,
-                    GL30.GL_TEXTURE_2D, colorTextureIds[i], 0);
+            GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0 + i, GL30.GL_TEXTURE_2D, colorTextureIds[i], 0);
         }
 
         // Depth renderbuffer
@@ -149,7 +147,7 @@ public class FboMRT {
     }
 
     public int getNumColorAttachments() {
-        if (colorTextureIds == null) return 0;
+        if (colorTextureIds == null) {return 0;}
         return colorTextureIds.length;
     }
 }

@@ -116,13 +116,12 @@ public class TextureAtlasManager {
             // map
             double maxX = batchedBoundary.getMaxX();
 
-            List<GaiaRectangle> list_rectanglesMaxX = maxXrectanglesMap.computeIfAbsent(maxX, k -> new ArrayList<>());
-            list_rectanglesMaxX.add(batchedBoundary);
+            List<GaiaRectangle> listRectanglesMaxX = maxXrectanglesMap.computeIfAbsent(maxX, k -> new ArrayList<>());
+            listRectanglesMaxX.add(batchedBoundary);
         }
     }
 
-    private Vector2d getBestPositionMosaicInAtlas(List<TexturesAtlasData> currProcessTextureAtlasDates, TexturesAtlasData texAtlasDataToPutInMosaic,
-                                                  Vector2d resultVec, GaiaRectangle beforeMosaicRectangle, List<GaiaRectangle> list_rectangles, TreeMap<Double, List<GaiaRectangle>> map_maxXrectangles) {
+    private Vector2d getBestPositionMosaicInAtlas(List<TexturesAtlasData> currProcessTextureAtlasDates, TexturesAtlasData texAtlasDataToPutInMosaic, Vector2d resultVec, GaiaRectangle beforeMosaicRectangle, List<GaiaRectangle> listRectangles, TreeMap<Double, List<GaiaRectangle>> map_maxRectangles) {
         if (resultVec == null) {
             resultVec = new Vector2d();
         }
@@ -163,7 +162,7 @@ public class TextureAtlasManager {
             texAtlasDataToPutInMosaic.getBatchedBoundary().setMaxY(currPosY + height);
 
             // put our rectangle into mosaic & check that no intersects with another rectangles
-            if (!this.intersectsRectangleAtlasingProcess(list_rectangles, texAtlasDataToPutInMosaic.getBatchedBoundary(), map_maxXrectangles)) {
+            if (!this.intersectsRectangleAtlasingProcess(listRectangles, texAtlasDataToPutInMosaic.getBatchedBoundary(), map_maxRectangles)) {
                 GaiaRectangle afterMosaicRectangle = new GaiaRectangle(0.0, 0.0, 0.0, 0.0);
                 afterMosaicRectangle.copyFrom(beforeMosaicRectangle);
                 afterMosaicRectangle.addBoundingRectangle(texAtlasDataToPutInMosaic.getBatchedBoundary());
@@ -195,7 +194,7 @@ public class TextureAtlasManager {
             texAtlasDataToPutInMosaic.getBatchedBoundary().setMaxY(currPosY + height);
 
             // put our rectangle into mosaic & check that no intersects with another rectangles
-            if (!this.intersectsRectangleAtlasingProcess(list_rectangles, texAtlasDataToPutInMosaic.getBatchedBoundary(), map_maxXrectangles)) {
+            if (!this.intersectsRectangleAtlasingProcess(listRectangles, texAtlasDataToPutInMosaic.getBatchedBoundary(), map_maxRectangles)) {
                 GaiaRectangle afterMosaicRectangle = new GaiaRectangle(0.0, 0.0, 0.0, 0.0);
                 afterMosaicRectangle.copyFrom(beforeMosaicRectangle);
                 afterMosaicRectangle.addBoundingRectangle(texAtlasDataToPutInMosaic.getBatchedBoundary());
@@ -222,15 +221,15 @@ public class TextureAtlasManager {
         return resultVec;
     }
 
-    private boolean intersectsRectangleAtlasingProcess(List<GaiaRectangle> listRectangles, GaiaRectangle rectangle, TreeMap<Double, List<GaiaRectangle>> map_maxXrectangles) {
+    private boolean intersectsRectangleAtlasingProcess(List<GaiaRectangle> listRectangles, GaiaRectangle rectangle, TreeMap<Double, List<GaiaRectangle>> mapMaxRectangles) {
         // this function returns true if the rectangle intersects with any existent rectangle of the listRectangles
         boolean intersects = false;
         double error = 10E-5;
 
         double currRectMinX = rectangle.getMinX();
 
-        // check with map_maxXrectangles all rectangles that have maxX > currRectMinX
-        for (Map.Entry<Double, List<GaiaRectangle>> entry : map_maxXrectangles.tailMap(currRectMinX).entrySet()) {
+        // check with mapMaxRectangles all rectangles that have maxX > currRectMinX
+        for (Map.Entry<Double, List<GaiaRectangle>> entry : mapMaxRectangles.tailMap(currRectMinX).entrySet()) {
             List<GaiaRectangle> existentRectangles = entry.getValue();
 
             int existentRectanglesCount = existentRectangles.size();
@@ -244,17 +243,6 @@ public class TextureAtlasManager {
                 }
             }
         }
-
-
-//        for (GaiaRectangle existentRectangle : listRectangles) {
-//            if (existentRectangle == rectangle) {
-//                continue;
-//            }
-//            if (existentRectangle.intersects(rectangle, error)) {
-//                intersects = true;
-//                break;
-//            }
-//        }
         return intersects;
     }
 
@@ -286,9 +274,7 @@ public class TextureAtlasManager {
     }
 
     public void recalculateTexCoordsAfterTextureAtlasing(GaiaScene gaiaScene, List<TexturesAtlasData> texAtlasDatasList) {
-        //*****************************************************************
         // Note : scene must join all surfaces before call this function
-        //*****************************************************************
         int maxWidth = getMaxWidth(texAtlasDatasList);
         int maxHeight = getMaxHeight(texAtlasDatasList);
 
@@ -335,12 +321,10 @@ public class TextureAtlasManager {
             double yPixelSize = 1.0 / texHeight;
 
             // obtain all vertex of the faceGroup
-            //groupVertexMapMemSave.clear();
             faceVerticesMemSave.clear();
             this.getGaiaVerticesOfFaceGroup(faceGroup, primitive.getVertices(), faceVerticesMemSave);
 
             // now, calculate the vertex list from the map
-            //List<GaiaVertex> vertexList = faceVerticesMemSave;
             int verticesCount = faceVerticesMemSave.size();
             double texCoordErrore = 0.0025;
             for (int k = 0; k < verticesCount; k++) {
@@ -378,8 +362,7 @@ public class TextureAtlasManager {
         }
     }
 
-    public void recalculateTexCoordsAfterTextureAtlasingObliqueCamera(HalfEdgeScene halfEdgeScene, List<TexturesAtlasData> texAtlasDatasList,
-                                                                      Map<Integer, Map<CameraDirectionType, List<HalfEdgeFace>>> mapClassificationCamDirTypeFacesList) {
+    public void recalculateTexCoordsAfterTextureAtlasingObliqueCamera(HalfEdgeScene halfEdgeScene, List<TexturesAtlasData> texAtlasDatasList, Map<Integer, Map<CameraDirectionType, List<HalfEdgeFace>>> mapClassificationCamDirTypeFacesList) {
         int maxWidth = getMaxWidth(texAtlasDatasList);
         int maxHeight = getMaxHeight(texAtlasDatasList);
 
@@ -394,7 +377,6 @@ public class TextureAtlasManager {
         for (int i = 0; i < texAtlasDataCount; i++) {
             TexturesAtlasData texAtlasData = texAtlasDatasList.get(i);
             int classifyId = texAtlasData.getClassifyId();
-            //PlaneType planeType = texAtlasData.getPlaneType(); // old old old old old old
             CameraDirectionType cameraDirectionType = texAtlasData.getCameraDirectionType();
             List<HalfEdgeFace> faceGroup = mapClassificationCamDirTypeFacesList.get(classifyId).get(cameraDirectionType);
 
@@ -485,12 +467,12 @@ public class TextureAtlasManager {
         int textureAtlasDatasCount = texAtlasDatasList.size();
         for (int i = 0; i < textureAtlasDatasCount; i++) {
             TexturesAtlasData textureAtlasData = texAtlasDatasList.get(i);
-            GaiaRectangle currentBoundary = textureAtlasData.getCurrentBoundary();
             GaiaRectangle batchedBoundary = textureAtlasData.getBatchedBoundary();
-            GaiaRectangle originBoundary = textureAtlasData.getOriginalBoundary();
 
             BufferedImage subImage = textureAtlasData.getTextureImage();
 
+//            GaiaRectangle currentBoundary = textureAtlasData.getCurrentBoundary();
+//            GaiaRectangle originBoundary = textureAtlasData.getOriginalBoundary();
 //            Color randomColor = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(), 0.8f);
 //            BufferedImage randomColoredImage = new BufferedImage(subImage.getWidth(), subImage.getHeight(), BufferedImage.TYPE_INT_ARGB);
 //            Graphics2D randomGraphics = randomColoredImage.createGraphics();
