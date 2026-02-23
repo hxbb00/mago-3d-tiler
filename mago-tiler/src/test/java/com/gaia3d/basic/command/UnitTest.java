@@ -917,8 +917,10 @@ class UnitTest {
     @Test
     void test_treeBillBoard() {
         // hwal-0, jat-0, nak-0, tree-0
-        String inputPath = "E:\\data\\trees\\pino_lod0\\LOD0-1m.glb";
-        String outputPath = "E:\\data\\trees\\output\\";
+        //String inputPath = "D:\\user\\znkim\\Downloads\\11.잣나무(PK)\\PK_KS_220712_0006\\PK_KS_220712_0006.fbx";
+        String inputPath = "D:\\user\\znkim\\Desktop\\sample.glb";
+        //String inputPath = "D:\\data\\korea-forest-service\\birch.glb";
+        String outputPath = "D:\\user\\znkim\\Downloads\\11.잣나무(PK)\\PK_KS_220712_0006\\";
 
 //        String[] args = new String[]{
 //                "-i", inputPath,

@@ -1312,7 +1312,7 @@ public class Engine {
         v1.setPosition(new Vector3d(pos1ModelCoords.x, pos1ModelCoords.y, pos1ModelCoords.z));
         v2.setPosition(new Vector3d(pos2ModelCoords.x, pos2ModelCoords.y, pos2ModelCoords.z));
         v3.setPosition(new Vector3d(pos3ModelCoords.x, pos3ModelCoords.y, pos3ModelCoords.z));
-        v4.setPosition(new Vector3d(modelCenter.x, modelCenter.y, pos3ModelCoords.z + 0.1)); // top center vertex
+        v4.setPosition(new Vector3d(modelCenter.x, modelCenter.y, pos3ModelCoords.z + 0.05)); // top center vertex
 
         // set texCoords
         v0.setTexcoords(new Vector2d(0.0, 1.0 - 0.0)); // invert the texCoordY

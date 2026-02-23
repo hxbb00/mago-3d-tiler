@@ -7,6 +7,8 @@ import com.gaia3d.basic.geometry.modifier.topology.GaiaSceneCleaner;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaWelder;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaWeldOptions;
 import com.gaia3d.basic.geometry.modifier.transform.GaiaBaker;
+import com.gaia3d.basic.geometry.modifier.transform.GaiaScaler;
+import com.gaia3d.basic.geometry.modifier.transform.GaiaScalerOptions;
 import com.gaia3d.basic.geometry.octree.HalfEdgeOctreeFaces;
 import com.gaia3d.basic.halfedge.DecimateParameters;
 import com.gaia3d.basic.halfedge.HalfEdgeCutter;
@@ -72,6 +74,19 @@ public class MainRendererBillBoard implements IAppLogic {
         // do 90 degrees rotation in X axis
         GaiaBaker baker = new GaiaBaker();
         baker.apply(scene);
+
+
+        GaiaBoundingBox bbox = scene.updateBoundingBox();
+        Vector3d volume = bbox.getVolume();
+
+        GaiaScalerOptions scalerOptions = GaiaScalerOptions.builder()
+                .scaleX(1.0 / volume.x)
+                .scaleY(1.0 / volume.y)
+                .scaleZ(1.0 / volume.z)
+                .build();
+        GaiaScaler scaler = new GaiaScaler(scalerOptions);
+        scaler.apply(scene);
+
         GaiaNode rootNode = scene.getNodes().get(0);
         Matrix4d rootTransformMatrix = rootNode.getTransformMatrix();
         baker.apply(scene);
@@ -81,7 +96,7 @@ public class MainRendererBillBoard implements IAppLogic {
         baker.apply(scene);
         // end do 90 degrees rotation in X axis
 
-        GaiaBoundingBox bbox = scene.updateBoundingBox();
+        bbox = scene.updateBoundingBox();
         Vector3d bboxCenter = bbox.getCenter();
 
         // copy the gaiaScene
