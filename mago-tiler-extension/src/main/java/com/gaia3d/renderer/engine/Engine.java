@@ -1864,7 +1864,7 @@ public class Engine {
 
         ShaderProgram colorCodeShaderProgram = shaderManager.getShaderProgram("trianglesDelimitedColorCode");
         colorCodeShaderProgram.bind();
-        uniformsMap = sceneShaderProgram.getUniformsMap();
+        uniformsMap = colorCodeShaderProgram.getUniformsMap();
         uniformsMap.setUniform3fv("bboxMin", new Vector3f((float) expandedBBox.getMinX(), (float) expandedBBox.getMinY(), (float) expandedBBox.getMinZ()));
         uniformsMap.setUniform3fv("bboxMax", new Vector3f((float) expandedBBox.getMaxX(), (float) expandedBBox.getMaxY(), (float) expandedBBox.getMaxZ()));
 
