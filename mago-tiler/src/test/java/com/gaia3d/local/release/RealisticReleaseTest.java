@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 @Tag("release")
 @Slf4j
 class RealisticReleaseTest {
-    @Disabled
     @Test
     void realistic00() {
         String path = "R00-bansong-obj";

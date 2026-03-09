@@ -127,7 +127,7 @@ public class GlobalOptions {
     private boolean isLeaveTemp = false;
     private byte multiThreadCount = 3;
 
-    private GlobalOptions () {
+    private GlobalOptions() {
         // Private constructor for singleton
     }
 
@@ -143,7 +143,7 @@ public class GlobalOptions {
         return instance;
     }
 
-    protected static void init(CommandLine command) throws IOException, RuntimeException {
+    public static void init(CommandLine command) throws IOException, RuntimeException {
         instance.setCommandLine(command);
 
         if (command == null) {

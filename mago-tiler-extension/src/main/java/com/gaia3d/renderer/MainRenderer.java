@@ -4,6 +4,7 @@ import com.gaia3d.basic.exchangable.GaiaSet;
 import com.gaia3d.basic.exchangable.SceneInfo;
 import com.gaia3d.basic.geometry.GaiaBoundingBox;
 import com.gaia3d.basic.geometry.entities.GaiaAAPlane;
+import com.gaia3d.basic.geometry.modifier.halfedge.HalfEdgeDecimator;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaSceneCleaner;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaWelder;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaWeldOptions;
@@ -126,7 +127,9 @@ public class MainRenderer implements IAppLogic {
 
         // take the halfEdgeScene and decimate and cut it
         HalfEdgeScene halfEdgeScene = halfEdgeScenes.get(0); // only one scene
-        halfEdgeScene.decimate(decimateParameters);
+        HalfEdgeDecimator decimator = new HalfEdgeDecimator(decimateParameters);
+        decimator.apply(halfEdgeScene);
+        //halfEdgeScene.decimate(decimateParameters);
 
         boolean scissorTextures = false;
         List<HalfEdgeScene> resultCutHalfEdgeScenes = HalfEdgeCutter.cutHalfEdgeSceneByGaiaAAPlanes(halfEdgeScene, cuttingPlanes, octree, scissorTextures, false);
@@ -224,7 +227,9 @@ public class MainRenderer implements IAppLogic {
             netSurfaceHalfEdgeScene.setOriginalPath(gaiaScene.getOriginalPath());
 
             // decimate
-            netSurfaceHalfEdgeScene.decimate(decimateParameters);
+            HalfEdgeDecimator decimator = new HalfEdgeDecimator(decimateParameters);
+            decimator.apply(netSurfaceHalfEdgeScene);
+            //netSurfaceHalfEdgeScene.decimate(decimateParameters);
         }
         // End make net surface**********
 
@@ -235,7 +240,9 @@ public class MainRenderer implements IAppLogic {
 
         // take the halfEdgeScene and decimate and cut it
         HalfEdgeScene halfEdgeScene = halfEdgeScenes.get(0); // only one scene
-        halfEdgeScene.decimate(decimateParameters);
+        HalfEdgeDecimator decimator = new HalfEdgeDecimator(decimateParameters);
+        decimator.apply(halfEdgeScene);
+        //halfEdgeScene.decimate(decimateParameters);
         boolean scissorTextures = false;
         List<HalfEdgeScene> resultCutHalfEdgeScenes = HalfEdgeCutter.cutHalfEdgeSceneByGaiaAAPlanes(halfEdgeScene, cuttingPlanes, octree, scissorTextures, false);
 

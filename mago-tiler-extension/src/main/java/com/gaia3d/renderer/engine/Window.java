@@ -69,7 +69,6 @@ public class Window {
             throw new RuntimeException("Failed to create the GLFW window");
         }
 
-
         glfwSetErrorCallback((int errorCode, long msgPtr) -> log.info("Error code [" + errorCode + "], msg [" + MemoryUtil.memUTF8(msgPtr) + "]"));
 
         glfwMakeContextCurrent(windowHandle); // all drawing happens in the current context
