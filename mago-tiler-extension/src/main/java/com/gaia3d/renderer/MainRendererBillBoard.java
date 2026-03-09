@@ -79,10 +79,11 @@ public class MainRendererBillBoard implements IAppLogic {
         GaiaBoundingBox bbox = scene.updateBoundingBox();
         Vector3d volume = bbox.getVolume();
 
+        double maxDimension = Math.max(volume.x, Math.max(volume.y, volume.z));
         GaiaScalerOptions scalerOptions = GaiaScalerOptions.builder()
-                .scaleX(1.0 / volume.x)
-                .scaleY(1.0 / volume.y)
-                .scaleZ(1.0 / volume.z)
+                .scaleX(1.0 / maxDimension)
+                .scaleY(1.0 / maxDimension)
+                .scaleZ(1.0 / maxDimension)
                 .build();
         GaiaScaler scaler = new GaiaScaler(scalerOptions);
         scaler.apply(scene);
