@@ -1,4 +1,4 @@
-package com.gaia3d.modifier;
+package com.gaia3d.modifier.billboard.plane;
 
 import com.gaia3d.TilerExtensionModule;
 import com.gaia3d.basic.geometry.modifier.transform.GaiaBaker;
@@ -29,9 +29,9 @@ import java.util.Map;
 @Setter
 @Slf4j
 @NoArgsConstructor
-public class TreeCreator {
+public class TreeBillboardCreator {
 
-    public void createTreeBillBoard(TreeBillBoardParameters treeBillBoardParameters, String inputPath, String outputPath) {
+    public void createTreeBillBoard(TreeBillBoardOptions treeBillBoardParameters, String inputPath, String outputPath) {
         // 1rst, load the tree model from the given path
         log.info("Loading tree model from path: {}", inputPath);
         AssimpConverterOptions options = AssimpConverterOptions.builder()

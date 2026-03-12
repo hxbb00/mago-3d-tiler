@@ -1,6 +1,8 @@
 package com.gaia3d.modifier;
 
 import com.gaia3d.command.LoggingConfiguration;
+import com.gaia3d.modifier.billboard.plane.TreeBillBoardOptions;
+import com.gaia3d.modifier.billboard.plane.TreeBillboardCreator;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -13,7 +15,7 @@ class TreeCreatorTest {
 
     @Test
     void createTreeBillBoard() {
-        TreeBillBoardParameters treeBillBoardParameters = new TreeBillBoardParameters();
+        TreeBillBoardOptions treeBillBoardParameters = new TreeBillBoardOptions();
         treeBillBoardParameters.setVerticalRectanglesCount(2);
         treeBillBoardParameters.setHorizontalRectanglesCount(1);
 
@@ -27,7 +29,7 @@ class TreeCreatorTest {
             throw new RuntimeException("Output directory creation failed");
         }
 
-        TreeCreator treeCreator = new TreeCreator();
+        TreeBillboardCreator treeCreator = new TreeBillboardCreator();
         treeCreator.createTreeBillBoard(treeBillBoardParameters, inputPath, outputPath);
     }
 }

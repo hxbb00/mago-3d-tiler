@@ -2,8 +2,8 @@ package com.gaia3d.basic.command;
 
 import com.gaia3d.command.LoggingConfiguration;
 import com.gaia3d.command.mago.Mago3DTilerMain;
-import com.gaia3d.modifier.TreeBillBoardParameters;
-import com.gaia3d.modifier.TreeCreator;
+import com.gaia3d.modifier.billboard.plane.TreeBillBoardOptions;
+import com.gaia3d.modifier.billboard.plane.TreeBillboardCreator;
 import com.gaia3d.util.GlobeUtils;
 import com.gaia3d.util.ImageUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -953,11 +953,11 @@ class UnitTest {
 //        };
 //        Mago3DTilerMain.main(args);
 
-        TreeBillBoardParameters treeBillBoardParameters = new TreeBillBoardParameters();
+        TreeBillBoardOptions treeBillBoardParameters = new TreeBillBoardOptions();
         treeBillBoardParameters.setVerticalRectanglesCount(3);
         treeBillBoardParameters.setHorizontalRectanglesCount(5);
 
-        TreeCreator treeCreator = new TreeCreator();
+        TreeBillboardCreator treeCreator = new TreeBillboardCreator();
         treeCreator.createTreeBillBoard(treeBillBoardParameters, inputPath, outputPath);
     }
 }

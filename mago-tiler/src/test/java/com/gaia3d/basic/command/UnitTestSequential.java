@@ -1,25 +1,8 @@
 package com.gaia3d.basic.command;
 
-import com.gaia3d.command.LoggingConfiguration;
 import com.gaia3d.command.mago.Mago3DTilerMain;
-import com.gaia3d.modifier.TreeBillBoardParameters;
-import com.gaia3d.modifier.TreeCreator;
-import com.gaia3d.util.GlobeUtils;
-import com.gaia3d.util.ImageUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.joml.Vector3d;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.locationtech.proj4j.BasicCoordinateTransform;
-import org.locationtech.proj4j.CRSFactory;
-import org.locationtech.proj4j.CoordinateReferenceSystem;
-import org.locationtech.proj4j.ProjCoordinate;
-
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 
 @SuppressWarnings("ALL")
 @Deprecated
