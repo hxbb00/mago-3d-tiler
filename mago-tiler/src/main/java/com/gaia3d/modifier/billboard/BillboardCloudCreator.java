@@ -7,6 +7,7 @@ import com.gaia3d.basic.model.*;
 import com.gaia3d.basic.types.TextureType;
 import com.gaia3d.modifier.billboard.atlas.TextureAtlas;
 import com.gaia3d.modifier.billboard.atlas.TextureAtlasSource;
+import com.gaia3d.modifier.billboard.atlas.TextureAtlasUtils;
 import com.gaia3d.modifier.billboard.render.OrthographicProjection;
 import lombok.extern.slf4j.Slf4j;
 import org.joml.Vector2d;
@@ -44,50 +45,56 @@ public class BillboardCloudCreator {
         GaiaScene resultScene = createDefaultScene();
         GaiaNode rootNode = resultScene.getRootNode();
 
+        int nodeIndex = 0;
         for (GaiaNode node : leafNodes) {
-            log.info("Extracting faces from node: {}", node.getName());
+            log.info("[{}/{}] Processing node: {}", ++nodeIndex, leafNodes.size(), node.getName());
             List<GaiaPrimitive> primitives = extractor.extractAllPrimitives(node);
             log.info("Extracted {} primitives from node: {}", primitives.size(), node.getName());
 
             for (GaiaPrimitive primitive : primitives) {
                 List<BillboardPlane> billboardPlanes = createBillboardCloud(primitive);
                 log.info("Created {} billboard planes from primitive", billboardPlanes.size());
-
-                int primitivesFaces = primitive.getSurfaces().stream().mapToInt(s -> s.getFaces() != null ? s.getFaces().size() : 0).sum();
-                log.info("Total faces in original primitive: {}", primitivesFaces);
-
-                int totalFaces = billboardPlanes.stream().mapToInt(bp -> bp.getFaces() != null ? bp.getFaces().size() : 0).sum();
-                log.info("Total faces in billboard planes: {}", totalFaces);
-
-                if (primitivesFaces != totalFaces) {
-                    log.warn("Face count mismatch: original primitive has {} faces, but billboard planes have {} faces", primitivesFaces, totalFaces);
-                }
-
                 GaiaMaterial material = scene.getMaterials().get(primitive.getMaterialIndex());
+
+                GaiaNode billboardNode = new GaiaNode();
+                billboardNode.setName(node.getName() + "_billboard");
+                rootNode.getChildren().add(billboardNode);
+
+                GaiaMesh billboardMesh = new GaiaMesh();
+                billboardNode.getMeshes().add(billboardMesh);
 
                 List<GaiaPrimitive> newPrimitives = buildBillboardPrimitive(resultScene, billboardPlanes, primitive.getVertices(), material);
                 for (GaiaPrimitive newPrimitive : newPrimitives) {
-                    GaiaNode billboardNode = new GaiaNode();
-                    billboardNode.setName(node.getName() + "_Billboard");
-                    rootNode.getChildren().add(billboardNode);
-
-                    GaiaMesh billboardMesh = new GaiaMesh();
                     billboardMesh.getPrimitives().add(newPrimitive);
-                    billboardNode.getMeshes().add(billboardMesh);
                 }
             }
         }
 
         atlasTextures(resultScene);
+        mergePrimitives(resultScene);
 
         return resultScene;
     }
 
-    public void atlasTextures(GaiaScene resultScene) {
+    private void mergePrimitives(GaiaScene resultScene) {
+        List<GaiaNode> leafNodes = extractor.extractAllNodes(resultScene, true);
+        for (GaiaNode node : leafNodes) {
+            List<GaiaMesh> meshes = node.getMeshes();
+
+            for (GaiaMesh mesh : meshes) {
+                List<GaiaPrimitive> meshPrimitives = mesh.getPrimitives();
+                GaiaPrimitive mergedPrimitive = TextureAtlasUtils.createMergedPrimitives(meshPrimitives);
+                meshPrimitives.clear();
+                meshPrimitives.add(mergedPrimitive);
+            }
+        }
+    }
+
+    private void atlasTextures(GaiaScene resultScene) {
         List<TextureAtlasSource> sources = new ArrayList<>();
         for (GaiaMaterial material : resultScene.getMaterials()) {
-            List<GaiaPrimitive> primitives = findPrimitivesUsingMaterial(resultScene, material);
-            BufferedImage diffuseImage = loadDiffuseImage(material);
+            List<GaiaPrimitive> primitives = TextureAtlasUtils.findPrimitivesUsingMaterial(resultScene, material);
+            BufferedImage diffuseImage = TextureAtlasUtils.loadDiffuseImage(material);
             TextureAtlasSource source = new TextureAtlasSource(material, primitives, diffuseImage);
             sources.add(source);
         }
@@ -98,6 +105,8 @@ public class BillboardCloudCreator {
         GaiaMaterial atlasMaterial = new GaiaMaterial();
         atlasMaterial.setId(0);
         atlasMaterial.setName("atlas");
+        //atlasMaterial.setBlend(true);
+        //atlasMaterial.setOpaque(false);
         File atlasFile = new File(options.getTempPath() + File.separator + "atlas.png");
         try {
             ImageIO.write(atlasImage, "PNG", atlasFile);
@@ -113,42 +122,7 @@ public class BillboardCloudCreator {
 
         resultScene.getMaterials().clear();
         resultScene.getMaterials().add(atlasMaterial);
-        changePrimitivesMaterialId(resultScene, atlasMaterial.getId());
-    }
-
-    public void changePrimitivesMaterialId(GaiaScene scene, int materialIndex) {
-        for (GaiaNode node : extractor.extractAllNodes(scene, true)) {
-            for (GaiaMesh mesh : node.getMeshes()) {
-                for (GaiaPrimitive primitive : mesh.getPrimitives()) {
-                    primitive.setMaterialIndex(materialIndex);
-                }
-            }
-        }
-    }
-
-    public List<GaiaPrimitive> findPrimitivesUsingMaterial(GaiaScene scene, GaiaMaterial material) {
-        List<GaiaPrimitive> primitives = new ArrayList<>();
-        for (GaiaNode node : extractor.extractAllNodes(scene, true)) {
-            for (GaiaMesh mesh : node.getMeshes()) {
-                for (GaiaPrimitive primitive : mesh.getPrimitives()) {
-                    if (primitive.getMaterialIndex() == material.getId()) {
-                        primitives.add(primitive);
-                    }
-                }
-            }
-        }
-        return primitives;
-    }
-
-    public BufferedImage loadDiffuseImage(GaiaMaterial material) {
-        Map<TextureType, List<GaiaTexture>> materialTextures = material.getTextures();
-        List<GaiaTexture> diffuseTextures = materialTextures.getOrDefault(TextureType.DIFFUSE, Collections.emptyList());
-        if (!diffuseTextures.isEmpty()) {
-            GaiaTexture diffuseTexture = diffuseTextures.getFirst();
-            diffuseTexture.loadImage();
-            return diffuseTexture.getBufferedImage();
-        }
-        return null;
+        TextureAtlasUtils.changePrimitivesMaterialId(resultScene, atlasMaterial.getId());
     }
 
     private List<GaiaPrimitive> buildBillboardPrimitive(GaiaScene scene, List<BillboardPlane> billboardPlanes, List<GaiaVertex> sourceVertices, GaiaMaterial originalMaterial) {
@@ -165,7 +139,6 @@ public class BillboardCloudCreator {
         List<GaiaPrimitive> primitives = new ArrayList<>();
         List<GaiaMaterial> materials = scene.getMaterials();
         List<OrthographicProjection> projections = new ArrayList<>();
-        int planeIndex = 0;
         for (BillboardPlane billboardPlane : billboardPlanes) {
             GaiaPrimitive targetPrimitive = new GaiaPrimitive();
             primitives.add(targetPrimitive);
@@ -181,6 +154,8 @@ public class BillboardCloudCreator {
             String materialName = "billboard_material_" + materialIndex;
             material.setId(materialIndex);
             material.setName(materialName);
+            //material.setOpaque(false);
+            //material.setBlend(true);
             materials.add(material);
 
             targetPrimitive.setMaterialIndex(materialIndex);
@@ -205,8 +180,6 @@ public class BillboardCloudCreator {
                 texture.setPath(textureName);
                 material.getTextures().computeIfAbsent(TextureType.DIFFUSE, k -> new ArrayList<>()).add(texture);
                 texture.loadImage();
-
-                planeIndex++;
             }
             renderer.cleanup();
         }
@@ -272,29 +245,6 @@ public class BillboardCloudCreator {
         double cameraDistance = planeSize * 2.0;
 
         Vector3d cameraPos = new Vector3d(obbCenter).add(new Vector3d(normal).mul(cameraDistance));
-
-        // depth range 계산
-        /*double minDepth = Double.POSITIVE_INFINITY;
-        double maxDepth = Double.NEGATIVE_INFINITY;
-
-        for (GaiaFace face : billboardPlane.getFaces()) {
-            List<GaiaVertex> faceVertices = getVerticesFromFace(face, sourceVertices);
-
-            for (GaiaVertex vertex : faceVertices) {
-                Vector3d p = new Vector3d(vertex.getPosition());
-
-                double depth = new Vector3d(p).sub(obbCenter).dot(normal);
-
-                if (depth < minDepth) {minDepth = depth;}
-                if (depth > maxDepth) {maxDepth = depth;}
-            }
-        }
-
-        double margin = planeSize * 0.1;
-
-        double near = Math.max(0.01, cameraDistance - maxDepth - margin);
-        double far = cameraDistance - minDepth + margin;*/
-
         Vector3d forward = new Vector3d(obbCenter).sub(cameraPos).normalize();
 
         double minDepth = Double.POSITIVE_INFINITY;
@@ -316,9 +266,6 @@ public class BillboardCloudCreator {
 
         double near = Math.max(0.01, minDepth - margin);
         double far = maxDepth + margin;
-
-
-        
 
         // projection 객체 생성
         OrthographicProjection projection = new OrthographicProjection();
@@ -380,7 +327,6 @@ public class BillboardCloudCreator {
         List<GaiaVertex> vertices = primitive.getVertices();
         List<GaiaFace> faces = extractor.extractAllFaces(primitive);
 
-        // filter out small triangles to avoid degenerate planes
         List<GaiaFace> filteredFaces = new ArrayList<>();
         for (GaiaFace face : faces) {
             GaiaTriangle triangle = new GaiaTriangle(vertices.get(face.getIndices()[0]).getPosition(), vertices.get(face.getIndices()[1]).getPosition(), vertices.get(face.getIndices()[2]).getPosition());
@@ -392,6 +338,12 @@ public class BillboardCloudCreator {
             filteredFaces.add(face);
         }
 
+        // arrange triangle size 순으로 정렬해서 billboard plane 생성 시 작은 triangle이 seed가 되는 경우를 줄임
+        /*filteredFaces.sort(Comparator.comparingDouble(face -> {
+            GaiaTriangle triangle = new GaiaTriangle(vertices.get(face.getIndices()[0]).getPosition(), vertices.get(face.getIndices()[1]).getPosition(), vertices.get(face.getIndices()[2]).getPosition());
+            return triangle.area();
+        }));*/
+
         return createBillboardPlanes(filteredFaces, vertices);
     }
 
@@ -402,10 +354,6 @@ public class BillboardCloudCreator {
         scene.getNodes().add(node);
 
         List<GaiaMaterial> materials = new ArrayList<>();
-        /*GaiaMaterial material = new GaiaMaterial();
-        material.setName("BillboardMaterial");
-        materials.add(material);*/
-
         scene.setMaterials(materials);
         scene.updateBoundingBox();
         return scene;

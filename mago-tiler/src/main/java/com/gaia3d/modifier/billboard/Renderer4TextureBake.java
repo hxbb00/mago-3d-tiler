@@ -63,15 +63,18 @@ public class Renderer4TextureBake {
             out vec4 fragColor;
             
             void main() {
-                vec4 color = uUseTexture ? texture(uColorTex, vTexCoord) : vec4(0.8, 0.8, 0.8, 1.0);
-            
-                if (color.a < 0.1) {
+                vec2 uv = fract(vTexCoord);
+                vec4 color = uUseTexture ? texture(uColorTex, uv) : vec4(0.8, 0.8, 0.8, 1.0);
+                if (color.a < 0.01) {
                     discard;
+                } else if (color.a < 0.8) {
+                    color.a = 0.8;
                 }
             
-                vec3 n = normalize(vNormal);
-                //fragColor = vec4(color.rgb, color.a);
-                fragColor = vec4(vTexCoord.x, vTexCoord.y, 0.0, 1.0);
+                fragColor = vec4(color.rgb, color.a);
+                //vec3 n = normalize(vNormal);
+                //fragColor = vec4(vTexCoord.x, vTexCoord.y, 0.0, 1.0);
+                //fragColor = vec4(0.8, 0.8, 0.8, 1.0);
             }
             """;
     private long window;
@@ -116,7 +119,11 @@ public class Renderer4TextureBake {
 
         glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
-        glDisable(GL_BLEND);
+        //glDisable(GL_BLEND);
+
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+        glBlendEquation(GL_FUNC_ADD);
 
         shaderProgram = createShaderProgram(VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE);
         fbo = new SimpleFbo(width, height);
@@ -163,7 +170,12 @@ public class Renderer4TextureBake {
                 glUniform1i(glGetUniformLocation(shaderProgram, "uUseTexture"), 0);
             }
 
+            //meshBuffer.draw();
+
+            // TODO
+            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             meshBuffer.draw();
+            //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
             // clean
             glBindVertexArray(0);
@@ -230,7 +242,193 @@ public class Renderer4TextureBake {
         }
     }
 
+    private static final double POSITION_EPSILON = 1e-9;
+
     private MeshData convertBillboardPlaneToMeshData(BillboardPlane billboardPlane, List<GaiaVertex> sourceVertices) {
+        if (billboardPlane == null || billboardPlane.getFaces() == null || billboardPlane.getFaces().isEmpty()) {
+            log.warn("BillboardPlane or faces are null/empty.");
+            return null;
+        }
+
+        List<Float> vertexList = new ArrayList<>();
+        List<Integer> indexList = new ArrayList<>();
+
+        int vertexOffset = 0;
+
+        int totalFaces = 0;
+        int skippedInvalidIndex = 0;
+        int skippedInvalidVertex = 0;
+        int skippedDegenerate = 0;
+        int emittedTriangles = 0;
+
+        for (GaiaFace face : billboardPlane.getFaces()) {
+            totalFaces++;
+
+            int[] indices = face.getIndices();
+            if (indices == null || indices.length != 3) {
+                log.warn("Skip face: not triangle. indices={}", indices == null ? null : java.util.Arrays.toString(indices));
+                continue;
+            }
+
+            int i0 = indices[0];
+            int i1 = indices[1];
+            int i2 = indices[2];
+
+            if (!isValidIndex(i0, sourceVertices.size()) ||
+                    !isValidIndex(i1, sourceVertices.size()) ||
+                    !isValidIndex(i2, sourceVertices.size())) {
+
+                skippedInvalidIndex++;
+                log.warn("Skip face: out of bounds indices={}, sourceVertices.size={}",
+                        java.util.Arrays.toString(indices), sourceVertices.size());
+                continue;
+            }
+
+            GaiaVertex gv0 = sourceVertices.get(i0);
+            GaiaVertex gv1 = sourceVertices.get(i1);
+            GaiaVertex gv2 = sourceVertices.get(i2);
+
+            if (!isValidVertex(gv0) || !isValidVertex(gv1) || !isValidVertex(gv2)) {
+                skippedInvalidVertex++;
+                log.warn("Skip face: invalid vertex in indices={}", java.util.Arrays.toString(indices));
+                continue;
+            }
+
+            if (isDegenerateTriangle(gv0, gv1, gv2, POSITION_EPSILON)) {
+                skippedDegenerate++;
+                log.debug("Skip face: degenerate triangle indices={}", java.util.Arrays.toString(indices));
+                continue;
+            }
+
+            RenderVertex rv0 = toRenderVertexSafe(gv0);
+            RenderVertex rv1 = toRenderVertexSafe(gv1);
+            RenderVertex rv2 = toRenderVertexSafe(gv2);
+
+            addRenderVertex(vertexList, rv0);
+            addRenderVertex(vertexList, rv1);
+            addRenderVertex(vertexList, rv2);
+
+            indexList.add(vertexOffset);
+            indexList.add(vertexOffset + 1);
+            indexList.add(vertexOffset + 2);
+
+            vertexOffset += 3;
+            emittedTriangles++;
+        }
+
+        if (vertexList.isEmpty() || indexList.isEmpty()) {
+            log.warn("MeshData empty. totalFaces={}, emittedTriangles={}, skippedInvalidIndex={}, skippedInvalidVertex={}, skippedDegenerate={}",
+                    totalFaces, emittedTriangles, skippedInvalidIndex, skippedInvalidVertex, skippedDegenerate);
+            return null;
+        }
+
+        float[] vertexArray = new float[vertexList.size()];
+        for (int i = 0; i < vertexList.size(); i++) {
+            vertexArray[i] = vertexList.get(i);
+        }
+
+        int[] indexArray = new int[indexList.size()];
+        for (int i = 0; i < indexList.size(); i++) {
+            indexArray[i] = indexList.get(i);
+        }
+
+        /*log.info("MeshData created. totalFaces={}, emittedTriangles={}, skippedInvalidIndex={}, skippedInvalidVertex={}, skippedDegenerate={}, vertexCount={}",
+                totalFaces, emittedTriangles, skippedInvalidIndex, skippedInvalidVertex, skippedDegenerate, vertexArray.length / 8);*/
+
+        return new MeshData(vertexArray, indexArray);
+    }
+
+    private boolean isValidIndex(int index, int size) {
+        return index >= 0 && index < size;
+    }
+
+    private boolean isValidVertex(GaiaVertex gv) {
+        if (gv == null || gv.getPosition() == null) {
+            return false;
+        }
+
+        Vector3d p = gv.getPosition();
+        return Double.isFinite(p.x) && Double.isFinite(p.y) && Double.isFinite(p.z);
+    }
+
+    private RenderVertex toRenderVertexSafe(GaiaVertex gv) {
+        RenderVertex rv = new RenderVertex();
+
+        Vector3d pos = gv.getPosition();
+        rv.px = (float) pos.x;
+        rv.py = (float) pos.y;
+        rv.pz = (float) pos.z;
+
+        Vector3d normal = gv.getNormal();
+        if (normal == null || !isFinite(normal) || normal.lengthSquared() < 1e-20) {
+            normal = new Vector3d(0.0, 0.0, 1.0);
+        } else {
+            normal = new Vector3d(normal).normalize();
+        }
+
+        rv.nx = (float) normal.x;
+        rv.ny = (float) normal.y;
+        rv.nz = (float) normal.z;
+
+        if (gv.getTexcoords() != null) {
+            float u = (float) gv.getTexcoords().x;
+            float v = (float) gv.getTexcoords().y;
+            rv.u = Float.isFinite(u) ? u : 0.0f;
+            rv.v = Float.isFinite(v) ? v : 0.0f;
+        } else {
+            rv.u = 0.0f;
+            rv.v = 0.0f;
+        }
+
+        return rv;
+    }
+
+    private boolean isFinite(Vector3d v) {
+        return Double.isFinite(v.x) && Double.isFinite(v.y) && Double.isFinite(v.z);
+    }
+
+    private boolean isDegenerateTriangle(GaiaVertex a, GaiaVertex b, GaiaVertex c, double epsilon) {
+        Vector3d p0 = a.getPosition();
+        Vector3d p1 = b.getPosition();
+        Vector3d p2 = c.getPosition();
+
+        if (p0 == null || p1 == null || p2 == null) {
+            return true;
+        }
+
+        if (isSamePosition(p0, p1, epsilon) ||
+                isSamePosition(p1, p2, epsilon) ||
+                isSamePosition(p2, p0, epsilon)) {
+            return true;
+        }
+
+        Vector3d e1 = new Vector3d(p1).sub(p0);
+        Vector3d e2 = new Vector3d(p2).sub(p0);
+        Vector3d cross = e1.cross(e2, new Vector3d());
+
+        return cross.lengthSquared() < epsilon * epsilon;
+    }
+
+    private boolean isSamePosition(Vector3d a, Vector3d b, double epsilon) {
+        return Math.abs(a.x - b.x) <= epsilon
+                && Math.abs(a.y - b.y) <= epsilon
+                && Math.abs(a.z - b.z) <= epsilon;
+    }
+
+    private void addRenderVertex(List<Float> vertexList, RenderVertex rv) {
+        vertexList.add(rv.px);
+        vertexList.add(rv.py);
+        vertexList.add(rv.pz);
+
+        vertexList.add(rv.nx);
+        vertexList.add(rv.ny);
+        vertexList.add(rv.nz);
+
+        vertexList.add(rv.u);
+        vertexList.add(rv.v);
+    }
+
+    /*private MeshData convertBillboardPlaneToMeshData(BillboardPlane billboardPlane, List<GaiaVertex> sourceVertices) {
         if (billboardPlane == null || billboardPlane.getFaces() == null || billboardPlane.getFaces().isEmpty()) {
             return null;
         }
@@ -288,7 +486,7 @@ public class Renderer4TextureBake {
         }
 
         return new MeshData(vertexArray, indexArray);
-    }
+    }*/
 
     private RenderVertex toRenderVertex(GaiaVertex gv) {
         RenderVertex rv = new RenderVertex();

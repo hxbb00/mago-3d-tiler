@@ -17,7 +17,7 @@ public class BillboardCloudOptions {
     @Builder.Default
     private final double minTriangleArea = 1e-6; // 삼각형 최소 면적
     @Builder.Default
-    private final boolean refineBillboardPlane = true;
+    private final boolean refineBillboardPlane = false;
     @Builder.Default
     private final int maximumTextureSize = 128;
     @Builder.Default
