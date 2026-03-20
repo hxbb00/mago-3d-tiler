@@ -26,4 +26,7 @@ public class BillboardPlane {
     private double minV;
     private double maxU;
     private double maxV;
+
+    private double depthMin;
+    private double depthMax;
 }

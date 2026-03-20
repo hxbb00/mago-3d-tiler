@@ -58,7 +58,7 @@ public class TreeBillboardCreator {
             baker.apply(gaiaScene);
         }
 
-        int lodCount = 6;
+        int lodCount = 4;
         for (int i = 0; i < lodCount; i++) {
             if (i == 0) {
                 int maxTextureSize = 1024;
@@ -88,9 +88,12 @@ public class TreeBillboardCreator {
             // as a test, save glb file.
             GlobalOptions globalOptions = GlobalOptions.getInstance();
             globalOptions.setTilesVersion("1.1");
-            GaiaScene gaiaScene = resultGaiaScenes.get(0);
+            GaiaScene gaiaScene = resultGaiaScenes.getFirst();
 
             GltfWriterOptions gltfWriterOptions = GltfWriterOptions.builder()
+                    .isDoubleSided(true)
+                    //.isUseQuantization(true)
+                    //.isUseShortTexCoord(true)
                     .build();
             GltfWriter gltfWriter = new GltfWriter(gltfWriterOptions);
             //String outputFilePath = outputPath + File.separator + "tree_billboard_v" + verticalPlanesCount + "h" + horizontalPlanesCount + "_L" + i + ".glb";

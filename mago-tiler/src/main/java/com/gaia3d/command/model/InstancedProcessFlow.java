@@ -22,7 +22,7 @@ import com.gaia3d.process.preprocess.*;
 import com.gaia3d.process.tileprocess.Pipeline;
 import com.gaia3d.process.tileprocess.TilingProcess;
 import com.gaia3d.process.tileprocess.tile.Instanced3DModelTiler;
-import com.gaia3d.process.tileprocess.tile.TreeInstanceTiler;
+import com.gaia3d.process.tileprocess.tile.ForestInstanceTiler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -63,14 +63,20 @@ public class InstancedProcessFlow implements ProcessFlow {
         /* Pre-process */
         List<PreProcess> preProcessors = new ArrayList<>();
         preProcessors.add(new TileInfoGenerator());
+
+        preProcessors.add(new GaiaScaler());
+        preProcessors.add(new GaiaZUpTransformer());
         preProcessors.add(new GaiaRotator());
+        preProcessors.add(new GaiaTransformBaker());
+
         preProcessors.add(new GaiaTexCoordCorrection());
         preProcessors.add(new InstanceTranslation(geoTiffs));
+        preProcessors.add(new GaiaTransformBaker());
 
         /* Main-process */
         TilingProcess tilingProcess;
         if (isForest)  {
-            tilingProcess = new TreeInstanceTiler();
+            tilingProcess = new ForestInstanceTiler();
         } else {
             tilingProcess = new Instanced3DModelTiler();
         }

@@ -10,6 +10,7 @@ import com.gaia3d.converter.assimp.AssimpConverter;
 import com.gaia3d.converter.assimp.AssimpConverterOptions;
 import com.gaia3d.converter.gltf.GltfWriter;
 import com.gaia3d.converter.gltf.GltfWriterOptions;
+import com.gaia3d.modifier.billboard.merge.MergeConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.Level;
 import org.joml.Vector3d;
@@ -30,60 +31,150 @@ class BillboardCloudCreatorTest {
     }
 
     @Test
-    void createBillboardCloud() {
-        String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\dt-model.glb";
+    void createBillboardCloudSingle() {
         //String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\original.glb";
-        File inputFile = new File(inputPath);
-
+        String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\dt-model.glb";
         String outputPath = "H:\\workspace\\billboardclouds-output";
-        File outputFile = new File(outputPath, inputFile.getName().replace(".glb", "-cloud.glb"));
-
-        GaiaScene scene = prepareScene(inputPath);
-
-        int index = 0;
         List<BillboardCloudOptions> lods =  new ArrayList<>();
 
+        MergeConfig mergeConfigA = new MergeConfig();
+        mergeConfigA.setMinNormalDot(Math.cos(Math.toRadians(45)));
+        mergeConfigA.setMaxCenterDistance(0.5);
+        mergeConfigA.setMinEfficiency(0.1);
+        mergeConfigA.setMaxThickness(0.05);
+        mergeConfigA.setMaxRectGap(0.05);
+        mergeConfigA.prepare();
+
         BillboardCloudOptions billboardCloudOptions0 = BillboardCloudOptions.builder()
-                .normalDotThreshold(Math.cos(Math.toRadians(40)))
-                .planeDistanceEpsilon(0.03)
-                .setRadius(0.2)
-                .minTriangleArea(1e-8)
-                .maximumTextureSize(128)
+                .normalDotThreshold(Math.cos(Math.toRadians(35)))
+                .planeDistanceEpsilon(0.5)
+                .maxPlaneExtent(0.5)
+                .setRadius(0.5)
+                .maxSplitDepth(1)
+                .minClusterFaceCount(1)
+                .minTriangleArea(1e-6)
+                .maximumTextureSize(32)
+                .blendTexture(true)
+                .mergeConfig(mergeConfigA)
+                .build();
+        lods.add(billboardCloudOptions0);
+
+        convertBC(lods, inputPath, outputPath);
+    }
+
+    @Test
+    void createBillboardCloud() {
+        //String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\original.glb";
+        //String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\hwal-sample.glb";
+        //String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\coconut_palm.glb";
+        String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\dt-model.glb";
+        String outputPath = "H:\\workspace\\billboardclouds-output";
+        List<BillboardCloudOptions> lods =  new ArrayList<>();
+
+        MergeConfig mergeConfigA = new MergeConfig();
+        mergeConfigA.setMinNormalDot(Math.cos(Math.toRadians(50)));
+        mergeConfigA.setMaxCenterDistance(0.5);
+        mergeConfigA.setMinEfficiency(0.2);
+        mergeConfigA.setMaxThickness(0.05);
+        mergeConfigA.setMaxRectGap(0.05);
+        mergeConfigA.prepare();
+
+        MergeConfig mergeConfigB = new MergeConfig();
+        mergeConfigB.setMinNormalDot(Math.cos(Math.toRadians(50)));
+        mergeConfigB.setMaxCenterDistance(0.5);
+        mergeConfigB.setMinEfficiency(0.1);
+        mergeConfigB.setMaxThickness(0.05);
+        mergeConfigB.setMaxRectGap(0.05);
+        mergeConfigB.prepare();
+
+        MergeConfig mergeConfigC = new MergeConfig();
+        mergeConfigC.setMinNormalDot(Math.cos(Math.toRadians(50)));
+        mergeConfigC.setMaxCenterDistance(0.5);
+        mergeConfigC.setMinEfficiency(0.05);
+        mergeConfigC.setMaxThickness(0.05);
+        mergeConfigC.setMaxRectGap(0.05);
+        mergeConfigC.prepare();
+
+        MergeConfig mergeConfigD = new MergeConfig();
+        mergeConfigD.setMinNormalDot(Math.cos(Math.toRadians(50)));
+        mergeConfigD.setMaxCenterDistance(0.5);
+        mergeConfigD.setMinEfficiency(0.025);
+        mergeConfigD.setMaxThickness(0.05);
+        mergeConfigD.setMaxRectGap(0.05);
+        mergeConfigD.prepare();
+
+        BillboardCloudOptions billboardCloudOptions0 = BillboardCloudOptions.builder()
+                .normalDotThreshold(Math.cos(Math.toRadians(45)))
+                .planeDistanceEpsilon(0.5)
+                .maxPlaneExtent(0.5)
+                .setRadius(0.5)
+                .maxSplitDepth(1)
+                .minClusterFaceCount(1)
+                .minTriangleArea(1e-6)
+                .maximumTextureSize(32)
+                .blendTexture(true)
+                .mergeConfig(mergeConfigA)
                 .build();
         lods.add(billboardCloudOptions0);
 
         BillboardCloudOptions billboardCloudOptions1 = BillboardCloudOptions.builder()
-                .normalDotThreshold(Math.cos(Math.toRadians(35)))
-                .planeDistanceEpsilon(0.06)
-                .setRadius(0.2)
-                .minTriangleArea(1e-8)
-                .maximumTextureSize(128)
+                .normalDotThreshold(Math.cos(Math.toRadians(45)))
+                .planeDistanceEpsilon(0.5)
+                .maxPlaneExtent(0.5)
+                .setRadius(0.5)
+                .maxSplitDepth(1)
+                .minClusterFaceCount(1)
+                .minTriangleArea(1e-6)
+                .maximumTextureSize(32)
+                .blendTexture(true)
+                .mergeConfig(mergeConfigA)
                 .build();
         lods.add(billboardCloudOptions1);
 
         BillboardCloudOptions billboardCloudOptions2 = BillboardCloudOptions.builder()
-                .normalDotThreshold(Math.cos(Math.toRadians(30)))
-                .planeDistanceEpsilon(0.09)
-                .setRadius(0.2)
-                .minTriangleArea(1e-9)
-                .maximumTextureSize(64)
+                .normalDotThreshold(Math.cos(Math.toRadians(45)))
+                .planeDistanceEpsilon(0.5)
+                .maxPlaneExtent(0.5)
+                .setRadius(0.5)
+                .maxSplitDepth(1)
+                .minClusterFaceCount(1)
+                .minTriangleArea(1e-6)
+                .maximumTextureSize(32)
+                .blendTexture(true)
+                .mergeConfig(mergeConfigC)
                 .build();
         lods.add(billboardCloudOptions2);
 
         BillboardCloudOptions billboardCloudOptions3 = BillboardCloudOptions.builder()
-                .normalDotThreshold(Math.cos(Math.toRadians(25)))
-                .planeDistanceEpsilon(0.12)
-                .setRadius(0.2)
-                .minTriangleArea(1e-10)
-                .maximumTextureSize(64)
+                .normalDotThreshold(Math.cos(Math.toRadians(45)))
+                .planeDistanceEpsilon(0.5)
+                .maxPlaneExtent(0.5)
+                .setRadius(0.5)
+                .maxSplitDepth(1)
+                .minClusterFaceCount(1)
+                .minTriangleArea(1e-6)
+                .maximumTextureSize(32)
+                .blendTexture(true)
+                .mergeConfig(mergeConfigD)
                 .build();
         lods.add(billboardCloudOptions3);
 
+        convertBC(lods, inputPath, outputPath);
+    }
 
+    private void convertBC(List<BillboardCloudOptions> lods, String inputPath, String outputPath) {
+        GaiaScene scene = prepareScene(inputPath);
+        File inputFile = new File(inputPath);
+        String inputFileName = inputFile.getName();
+        File outputFile = new File(outputPath, inputFileName.replace(".glb", "-bc.glb"));
+        File outputTempPath = new  File(outputPath, "temp");
+
+        int index = 0;
         for (BillboardCloudOptions lod : lods) {
+            lod.setTempPath(outputTempPath.getAbsolutePath());
             File name = new File(outputFile.getAbsolutePath().replace(".glb", "-lod" + index + ".glb"));
-            BillboardCloudCreator creator = new BillboardCloudCreator(lod);
-            GaiaScene billboardCloud = creator.createBillboardCloud(scene);
+            AbstractBillboardCloudCreator creator = new ImprovedBillboardCloudCreator(lod);
+            GaiaScene billboardCloud = creator.create(scene);
             writeGlb(billboardCloud, name.getAbsolutePath());
             index++;
         }

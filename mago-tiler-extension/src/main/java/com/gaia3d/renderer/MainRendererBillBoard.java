@@ -5,8 +5,8 @@ import com.gaia3d.basic.geometry.entities.GaiaAAPlane;
 import com.gaia3d.basic.geometry.modifier.halfedge.HalfEdgeDecimator;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaExtractor;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaSceneCleaner;
-import com.gaia3d.basic.geometry.modifier.topology.GaiaWelder;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaWeldOptions;
+import com.gaia3d.basic.geometry.modifier.topology.GaiaWelder;
 import com.gaia3d.basic.geometry.modifier.transform.GaiaBaker;
 import com.gaia3d.basic.geometry.modifier.transform.GaiaScaler;
 import com.gaia3d.basic.geometry.modifier.transform.GaiaScalerOptions;
@@ -76,16 +76,11 @@ public class MainRendererBillBoard implements IAppLogic {
         GaiaBaker baker = new GaiaBaker();
         baker.apply(scene);
 
-
         GaiaBoundingBox bbox = scene.updateBoundingBox();
         Vector3d volume = bbox.getVolume();
 
         double maxDimension = Math.max(volume.x, Math.max(volume.y, volume.z));
-        GaiaScalerOptions scalerOptions = GaiaScalerOptions.builder()
-                .scaleX(1.0 / maxDimension)
-                .scaleY(1.0 / maxDimension)
-                .scaleZ(1.0 / maxDimension)
-                .build();
+        GaiaScalerOptions scalerOptions = GaiaScalerOptions.builder().scaleX(1.0 / maxDimension).scaleY(1.0 / maxDimension).scaleZ(1.0 / maxDimension).build();
         GaiaScaler scaler = new GaiaScaler(scalerOptions);
         scaler.apply(scene);
 
@@ -256,7 +251,8 @@ public class MainRendererBillBoard implements IAppLogic {
         normalTextures.add(atlasNormalTexture);
         textures.put(TextureType.NORMALS, normalTextures);
         material.setTextures(textures);
-        material.setBlend(false);
+        material.setBlend(true);
+        material.setOpaque(false);
         material.setShininess(1.0f);
 
         GaiaExtractor extractor = new GaiaExtractor();
@@ -303,13 +299,7 @@ public class MainRendererBillBoard implements IAppLogic {
 
             // 2nd, make the halfEdgeScene
             gaiaSceneCopy.joinAllSurfaces();
-            GaiaWeldOptions weldOptions = GaiaWeldOptions.builder()
-                    .error(error)
-                    .checkTexCoord(false)
-                    .checkNormal(false)
-                    .checkColor(false)
-                    .checkBatchId(false)
-                    .build();
+            GaiaWeldOptions weldOptions = GaiaWeldOptions.builder().error(error).checkTexCoord(false).checkNormal(false).checkColor(false).checkBatchId(false).build();
             GaiaWelder weld = new GaiaWelder(weldOptions);
             weld.apply(gaiaSceneCopy);
 

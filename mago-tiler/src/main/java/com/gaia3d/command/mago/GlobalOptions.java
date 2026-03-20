@@ -421,10 +421,14 @@ public class GlobalOptions {
         boolean isParametric = inputFormat.equals(FormatType.GEOJSON) || inputFormat.equals(FormatType.SHP) || inputFormat.equals(FormatType.CITYGML) || inputFormat.equals(FormatType.INDOORGML) || inputFormat.equals(FormatType.GEO_PACKAGE);
         instance.setParametric(isParametric);
 
+        if (outputFormat.equals(FormatType.FOREST) || outputFormat.equals(FormatType.I3DM)) {
+            instance.setParametric(false);
+        }
         if (outputFormat.equals(FormatType.FOREST)) {
             isRefineAdd = true;
             instance.setTilesVersion("1.0");
         }
+
         if (isParametric) {
             if (outputFormat.equals(FormatType.B3DM)) {
                 isRefineAdd = true;

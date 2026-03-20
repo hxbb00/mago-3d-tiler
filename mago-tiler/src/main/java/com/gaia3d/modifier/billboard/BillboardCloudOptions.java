@@ -1,5 +1,6 @@
 package com.gaia3d.modifier.billboard;
 
+import com.gaia3d.modifier.billboard.merge.MergeConfig;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,9 +18,22 @@ public class BillboardCloudOptions {
     @Builder.Default
     private final double minTriangleArea = 1e-6; // 삼각형 최소 면적
     @Builder.Default
-    private final boolean refineBillboardPlane = false;
+    private final double maxPlaneExtent = 0.35; // 평면 최대 확장
+    @Builder.Default
+    private final int maxSplitDepth = 2; // 최대 분할 깊이 (2면 최대 4등분 재귀 2단계)
+    @Builder.Default
+    private final int minClusterFaceCount = 1; // 클러스터가 유지되기 위한 최소 면 수
+    @Builder.Default
+    private final double splitBalanceEpsilon = 0.05; // 분할 균형 허용 오차 (0.05면 5% 이상 불균형한 경우 분할)
+    @Builder.Default
+    private final MergeConfig mergeConfig = new MergeConfig();
+
+    @Builder.Default
+    private final boolean refineBillboardPlane = true;
     @Builder.Default
     private final int maximumTextureSize = 128;
     @Builder.Default
-    private final String tempPath = "H:\\workspace\\billboardclouds-output\\textures";
+    private final boolean blendTexture = false;
+    @Builder.Default
+    private String tempPath = "/temp";
 }

@@ -236,7 +236,7 @@ public class Renderer4TextureBake {
             }
 
             ImageIO.write(image, "png", output);
-            log.info("Saved FBO PNG: {}", output.getAbsolutePath());
+            log.debug("Saved FBO PNG: {}", output.getAbsolutePath());
         } catch (IOException e) {
             throw new RuntimeException("Failed to save PNG: " + filePath, e);
         }

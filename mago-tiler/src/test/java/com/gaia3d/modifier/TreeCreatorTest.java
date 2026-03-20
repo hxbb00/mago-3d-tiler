@@ -16,14 +16,14 @@ class TreeCreatorTest {
     @Test
     void createTreeBillBoard() {
         TreeBillBoardOptions treeBillBoardParameters = new TreeBillBoardOptions();
-        treeBillBoardParameters.setVerticalRectanglesCount(2);
-        treeBillBoardParameters.setHorizontalRectanglesCount(1);
-
         treeBillBoardParameters.setVerticalRectanglesCount(4);
         treeBillBoardParameters.setHorizontalRectanglesCount(3);
 
-        String inputPath = "D:\\data\\korea-forest-service\\original.glb";
-        String outputPath = "E:\\data\\mago-server\\output\\BillboardCreation\\";
+        //String inputPath = "D:\\data\\korea-forest-service\\original.glb";
+        //String outputPath = "E:\\data\\mago-server\\output\\BillboardCreation\\";
+
+        String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\dt-model.glb";
+        String outputPath = "H:\\workspace\\billboardclouds-output";
         File outputDir = new File(outputPath);
         if (!outputDir.exists() && !outputDir.mkdirs()) {
             throw new RuntimeException("Output directory creation failed");

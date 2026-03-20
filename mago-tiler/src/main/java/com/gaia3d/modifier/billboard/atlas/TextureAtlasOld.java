@@ -1,8 +1,6 @@
 package com.gaia3d.modifier.billboard.atlas;
 
-import com.gaia3d.basic.model.GaiaFace;
 import com.gaia3d.basic.model.GaiaPrimitive;
-import com.gaia3d.basic.model.GaiaSurface;
 import com.gaia3d.basic.model.GaiaVertex;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,16 +17,16 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class TextureAtlas {
+public class TextureAtlasOld {
     private final List<TextureAtlasEntry> entries = new ArrayList<>();
 
     private BufferedImage atlasImage;
     private int atlasWidth;
     private int atlasHeight;
+
     private int tileWidth;
     private int tileHeight;
 
-    private final int padding = 2;
     private int columns;
     private int rows;
 

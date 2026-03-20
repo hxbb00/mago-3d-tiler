@@ -7,6 +7,7 @@ import com.gaia3d.command.mago.GlobalOptions;
 import com.gaia3d.converter.kml.TileTransformInfo;
 import com.gaia3d.process.tileprocess.tile.TileInfo;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.geotools.api.geometry.Position;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -18,10 +19,11 @@ import org.joml.Vector3d;
 import java.util.List;
 
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class GaiaTranslator implements PreProcess {
     private final List<GridCoverage2D> terrains;
     private final List<GridCoverage2D> geoids;
+    private GaiaScene recentScene = null;
 
     @Override
     public TileInfo run(TileInfo tileInfo) {
@@ -31,9 +33,13 @@ public class GaiaTranslator implements PreProcess {
         }
 
         GlobalOptions globalOptions = GlobalOptions.getInstance();
+        GaiaScene scene = tileInfo.getScene();
+        if (recentScene == scene) {
+            return tileInfo;
+        }
+        recentScene = scene;
 
-        GaiaScene gaiaScene = tileInfo.getScene();
-        GaiaBoundingBox boundingBox = gaiaScene.updateBoundingBox();
+        GaiaBoundingBox boundingBox = scene.updateBoundingBox();
 
         Vector3d floorCenter = tileTransformInfo.getPosition();
         double terrainHeight = getTerrainHeightFromCartographic(floorCenter);
@@ -41,7 +47,7 @@ public class GaiaTranslator implements PreProcess {
         Vector3d translateOffset = globalOptions.getTranslateOffset();
         Vector3d translation = new Vector3d(translateOffset.x, translateOffset.y, terrainHeight + translateOffset.z);
 
-        List<GaiaNode> nodes = gaiaScene.getNodes();
+        List<GaiaNode> nodes = scene.getNodes();
         for (GaiaNode node : nodes) {
             Matrix4d transform = node.getTransformMatrix();
             Matrix4d translateMatrix = new Matrix4d().identity();

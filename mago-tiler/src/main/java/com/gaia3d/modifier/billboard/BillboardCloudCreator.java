@@ -2,7 +2,6 @@ package com.gaia3d.modifier.billboard;
 
 import com.gaia3d.basic.geometry.entities.GaiaPlane;
 import com.gaia3d.basic.geometry.entities.GaiaTriangle;
-import com.gaia3d.basic.geometry.modifier.topology.GaiaExtractor;
 import com.gaia3d.basic.model.*;
 import com.gaia3d.basic.types.TextureType;
 import com.gaia3d.modifier.billboard.atlas.TextureAtlas;
@@ -10,7 +9,6 @@ import com.gaia3d.modifier.billboard.atlas.TextureAtlasSource;
 import com.gaia3d.modifier.billboard.atlas.TextureAtlasUtils;
 import com.gaia3d.modifier.billboard.render.OrthographicProjection;
 import lombok.extern.slf4j.Slf4j;
-import org.joml.Vector2d;
 import org.joml.Vector3d;
 
 import javax.imageio.ImageIO;
@@ -20,26 +18,17 @@ import java.io.IOException;
 import java.util.*;
 
 @Slf4j
-public class BillboardCloudCreator {
-
-    private final BillboardCloudOptions options;
-    private final GaiaExtractor extractor;
-    private final Renderer4TextureBake renderer;
+public class BillboardCloudCreator extends AbstractBillboardCloudCreator {
 
     public BillboardCloudCreator() {
-        this.options = BillboardCloudOptions.builder().build();
-        extractor = new GaiaExtractor();
-        renderer = new Renderer4TextureBake(options);
+        super();
     }
 
     public BillboardCloudCreator(BillboardCloudOptions options) {
-        this.options = options;
-        extractor = new GaiaExtractor();
-        renderer = new Renderer4TextureBake(options);
+        super(options);
     }
 
-
-    public GaiaScene createBillboardCloud(GaiaScene scene) {
+    public GaiaScene create(GaiaScene scene) {
         List<GaiaNode> leafNodes = extractor.extractAllNodes(scene, true);
 
         GaiaScene resultScene = createDefaultScene();
@@ -52,7 +41,7 @@ public class BillboardCloudCreator {
             log.info("Extracted {} primitives from node: {}", primitives.size(), node.getName());
 
             for (GaiaPrimitive primitive : primitives) {
-                List<BillboardPlane> billboardPlanes = createBillboardCloud(primitive);
+                List<BillboardPlane> billboardPlanes = generateBillboardPlanes(primitive);
                 log.info("Created {} billboard planes from primitive", billboardPlanes.size());
                 GaiaMaterial material = scene.getMaterials().get(primitive.getMaterialIndex());
 
@@ -72,57 +61,7 @@ public class BillboardCloudCreator {
 
         atlasTextures(resultScene);
         mergePrimitives(resultScene);
-
         return resultScene;
-    }
-
-    private void mergePrimitives(GaiaScene resultScene) {
-        List<GaiaNode> leafNodes = extractor.extractAllNodes(resultScene, true);
-        for (GaiaNode node : leafNodes) {
-            List<GaiaMesh> meshes = node.getMeshes();
-
-            for (GaiaMesh mesh : meshes) {
-                List<GaiaPrimitive> meshPrimitives = mesh.getPrimitives();
-                GaiaPrimitive mergedPrimitive = TextureAtlasUtils.createMergedPrimitives(meshPrimitives);
-                meshPrimitives.clear();
-                meshPrimitives.add(mergedPrimitive);
-            }
-        }
-    }
-
-    private void atlasTextures(GaiaScene resultScene) {
-        List<TextureAtlasSource> sources = new ArrayList<>();
-        for (GaiaMaterial material : resultScene.getMaterials()) {
-            List<GaiaPrimitive> primitives = TextureAtlasUtils.findPrimitivesUsingMaterial(resultScene, material);
-            BufferedImage diffuseImage = TextureAtlasUtils.loadDiffuseImage(material);
-            TextureAtlasSource source = new TextureAtlasSource(material, primitives, diffuseImage);
-            sources.add(source);
-        }
-        TextureAtlas atlas = new TextureAtlas();
-        BufferedImage atlasImage = atlas.build(sources);
-        atlas.remapUv();
-
-        GaiaMaterial atlasMaterial = new GaiaMaterial();
-        atlasMaterial.setId(0);
-        atlasMaterial.setName("atlas");
-        //atlasMaterial.setBlend(true);
-        //atlasMaterial.setOpaque(false);
-        File atlasFile = new File(options.getTempPath() + File.separator + "atlas.png");
-        try {
-            ImageIO.write(atlasImage, "PNG", atlasFile);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        GaiaTexture atlasTexture = new GaiaTexture();
-        atlasTexture.setName("atlas");
-        atlasTexture.setParentPath(options.getTempPath());
-        atlasTexture.setPath("atlas.png");
-        atlasTexture.loadImage();
-        atlasMaterial.getTextures().computeIfAbsent(TextureType.DIFFUSE, k -> new ArrayList<>()).add(atlasTexture);
-
-        resultScene.getMaterials().clear();
-        resultScene.getMaterials().add(atlasMaterial);
-        TextureAtlasUtils.changePrimitivesMaterialId(resultScene, atlasMaterial.getId());
     }
 
     private List<GaiaPrimitive> buildBillboardPrimitive(GaiaScene scene, List<BillboardPlane> billboardPlanes, List<GaiaVertex> sourceVertices, GaiaMaterial originalMaterial) {
@@ -138,8 +77,9 @@ public class BillboardCloudCreator {
 
         List<GaiaPrimitive> primitives = new ArrayList<>();
         List<GaiaMaterial> materials = scene.getMaterials();
-        List<OrthographicProjection> projections = new ArrayList<>();
+        int primitiveIndex = 0;
         for (BillboardPlane billboardPlane : billboardPlanes) {
+            log.info(" - [{}/{}] Adding billboard primitive to mesh", ++primitiveIndex, billboardPlanes.size());
             GaiaPrimitive targetPrimitive = new GaiaPrimitive();
             primitives.add(targetPrimitive);
 
@@ -160,8 +100,7 @@ public class BillboardCloudCreator {
 
             targetPrimitive.setMaterialIndex(materialIndex);
 
-            OrthographicProjection orthographicProjection = addBillboardQuad(billboardPlane, sourceVertices, targetVertices, surface);
-            projections.add(orthographicProjection);
+            OrthographicProjection orthographicProjection = createBillboardQuad(billboardPlane, sourceVertices, targetVertices, surface);
             log.debug("Added billboard quad for plane with center {} and normal {}, orthographic projection: {}", billboardPlane.getCenter(), billboardPlane.getNormal(), orthographicProjection);
 
             renderer.init();
@@ -187,15 +126,13 @@ public class BillboardCloudCreator {
         return primitives;
     }
 
-    private OrthographicProjection addBillboardQuad(BillboardPlane billboardPlane, List<GaiaVertex> sourceVertices, List<GaiaVertex> targetVertices, GaiaSurface targetSurface) {
+    private OrthographicProjection createBillboardQuad(BillboardPlane billboardPlane, List<GaiaVertex> sourceVertices, List<GaiaVertex> targetVertices, GaiaSurface targetSurface) {
         if (billboardPlane == null) {
             return null;
         }
 
         Vector3d normal = new Vector3d(billboardPlane.getNormal()).normalize();
-
         Vector3d origin = projectPointOntoPlane(new Vector3d(billboardPlane.getCenter()), billboardPlane.getPlane());
-
         Vector3d tangent = new Vector3d(billboardPlane.getTangent());
         Vector3d bitangent = new Vector3d(billboardPlane.getBitangent());
 
@@ -219,10 +156,10 @@ public class BillboardCloudCreator {
 
         int baseIndex = targetVertices.size();
 
-        GaiaVertex v0 = createVertex(p0, normal, 0.0, 1.0);
-        GaiaVertex v1 = createVertex(p1, normal, 1.0, 1.0);
-        GaiaVertex v2 = createVertex(p2, normal, 1.0, 0.0);
-        GaiaVertex v3 = createVertex(p3, normal, 0.0, 0.0);
+        GaiaVertex v0 = createVertex(p0, 0.0, 1.0);
+        GaiaVertex v1 = createVertex(p1, 1.0, 1.0);
+        GaiaVertex v2 = createVertex(p2, 1.0, 0.0);
+        GaiaVertex v3 = createVertex(p3, 0.0, 0.0);
 
         targetVertices.add(v0);
         targetVertices.add(v1);
@@ -292,38 +229,7 @@ public class BillboardCloudCreator {
         return projection;
     }
 
-    private Vector3d createStableTangent(Vector3d normal) {
-        Vector3d ref = Math.abs(normal.z) < 0.9 ? new Vector3d(0.0, 0.0, 1.0) : new Vector3d(0.0, 1.0, 0.0);
-
-        Vector3d tangent = ref.cross(normal, new Vector3d());
-        if (tangent.lengthSquared() == 0.0) {
-            ref.set(1.0, 0.0, 0.0);
-            tangent = ref.cross(normal, new Vector3d());
-        }
-        tangent.normalize();
-        return tangent;
-    }
-
-    private GaiaVertex createVertex(Vector3d position, Vector3d normal, double u, double v) {
-        GaiaVertex vertex = new GaiaVertex();
-        vertex.setPosition(new Vector3d(position));
-        vertex.setNormal(new Vector3d(normal));
-        vertex.setTexcoords(new Vector2d(u, v));
-        return vertex;
-    }
-
-    private Vector3d projectPointOntoPlane(Vector3d point, GaiaPlane plane) {
-        Vector3d normal = plane.getNormal();
-        double lenSq = normal.lengthSquared();
-        if (lenSq == 0.0) {
-            return new Vector3d(point);
-        }
-
-        double distance = plane.distanceToPoint(point); // signed distance * |n| if n not normalized
-        return new Vector3d(point).sub(new Vector3d(normal).mul(distance / lenSq));
-    }
-
-    public List<BillboardPlane> createBillboardCloud(GaiaPrimitive primitive) {
+    private List<BillboardPlane> generateBillboardPlanes(GaiaPrimitive primitive) {
         List<GaiaVertex> vertices = primitive.getVertices();
         List<GaiaFace> faces = extractor.extractAllFaces(primitive);
 
@@ -332,34 +238,16 @@ public class BillboardCloudCreator {
             GaiaTriangle triangle = new GaiaTriangle(vertices.get(face.getIndices()[0]).getPosition(), vertices.get(face.getIndices()[1]).getPosition(), vertices.get(face.getIndices()[2]).getPosition());
             double seedArea = triangle.area();
             if (seedArea < options.getMinTriangleArea()) {
-                log.info("Skipping face with area {} below threshold {}, indices: {}", seedArea, options.getMinTriangleArea(), face.getIndices());
+                log.debug("Skipping face with area {} below threshold {}, indices: {}", seedArea, options.getMinTriangleArea(), face.getIndices());
                 continue;
             }
             filteredFaces.add(face);
         }
 
-        // arrange triangle size 순으로 정렬해서 billboard plane 생성 시 작은 triangle이 seed가 되는 경우를 줄임
-        /*filteredFaces.sort(Comparator.comparingDouble(face -> {
-            GaiaTriangle triangle = new GaiaTriangle(vertices.get(face.getIndices()[0]).getPosition(), vertices.get(face.getIndices()[1]).getPosition(), vertices.get(face.getIndices()[2]).getPosition());
-            return triangle.area();
-        }));*/
-
-        return createBillboardPlanes(filteredFaces, vertices);
+        return generateBillboardPlanes(filteredFaces, vertices);
     }
 
-    private GaiaScene createDefaultScene() {
-        GaiaScene scene = new GaiaScene();
-        GaiaNode node = new GaiaNode();
-        node.setName("DefaultNode");
-        scene.getNodes().add(node);
-
-        List<GaiaMaterial> materials = new ArrayList<>();
-        scene.setMaterials(materials);
-        scene.updateBoundingBox();
-        return scene;
-    }
-
-    private List<BillboardPlane> createBillboardPlanes(List<GaiaFace> faces, List<GaiaVertex> vertices) {
+    private List<BillboardPlane> generateBillboardPlanes(List<GaiaFace> faces, List<GaiaVertex> vertices) {
         List<BillboardPlane> billboardPlanes = new ArrayList<>();
         Set<Integer> usedFaceIndices = new HashSet<>();
 
@@ -368,7 +256,7 @@ public class BillboardCloudCreator {
                 continue;
             }
 
-            BillboardPlane billboardPlane = createBillboardPlane(faces, vertices, i, usedFaceIndices);
+            BillboardPlane billboardPlane = generateBillboardPlanes(faces, vertices, i, usedFaceIndices);
             if (billboardPlane != null) {
                 billboardPlanes.add(billboardPlane);
             }
@@ -378,7 +266,7 @@ public class BillboardCloudCreator {
         return billboardPlanes;
     }
 
-    private BillboardPlane createBillboardPlane(List<GaiaFace> faces, List<GaiaVertex> vertices, int seedFaceIndex, Set<Integer> usedFaceIndices) {
+    private BillboardPlane generateBillboardPlanes(List<GaiaFace> faces, List<GaiaVertex> vertices, int seedFaceIndex, Set<Integer> usedFaceIndices) {
         GaiaFace seedFace = faces.get(seedFaceIndex);
         List<GaiaVertex> seedVertices = getVerticesFromFace(seedFace, vertices);
         if (seedVertices.size() < 3) {
@@ -399,12 +287,12 @@ public class BillboardCloudCreator {
         groupedFaces.add(seedFace);
         usedFaceIndices.add(seedFaceIndex);
 
-        for (int i = 0; i < faces.size(); i++) {
-            if (i == seedFaceIndex || usedFaceIndices.contains(i)) {
+        for (int faceIndex = 0; faceIndex < faces.size(); faceIndex++) {
+            if (faceIndex == seedFaceIndex || usedFaceIndices.contains(faceIndex)) {
                 continue;
             }
 
-            GaiaFace candidateFace = faces.get(i);
+            GaiaFace candidateFace = faces.get(faceIndex);
             List<GaiaVertex> candidateVertices = getVerticesFromFace(candidateFace, vertices);
             if (candidateVertices.size() < 3) {
                 continue;
@@ -439,62 +327,23 @@ public class BillboardCloudCreator {
             }
 
             groupedFaces.add(candidateFace);
-            usedFaceIndices.add(i);
+            usedFaceIndices.add(faceIndex);
         }
 
         BillboardPlane billboardPlane = new BillboardPlane();
-
         billboardPlane.setPlane(seedPlane);
-
-        // BillboardPlane에 아래 필드가 있으면 같이 넣는 걸 추천
         billboardPlane.setFaces(groupedFaces);
         billboardPlane.setCenter(seedCentroid);
         billboardPlane.setNormal(seedNormal);
 
-        // 1. groupedFaces 기반으로 normal / center 보정
         if (options.isRefineBillboardPlane()) {
             refineBillboardPlane(billboardPlane, vertices);
         }
 
-        // 2. 보정된 plane 위에서 OBB 계산
         computePlaneOBB(billboardPlane, vertices);
 
         log.debug("Seed face {} -> grouped {} faces", seedFaceIndex, groupedFaces.size());
         return billboardPlane;
-    }
-
-    private List<GaiaVertex> getVerticesFromFace(GaiaFace face, List<GaiaVertex> allVertices) {
-        int[] vertexIndices = face.getIndices();
-        List<GaiaVertex> vertices = new ArrayList<>(vertexIndices.length);
-
-        for (int index : vertexIndices) {
-            if (index >= 0 && index < allVertices.size()) {
-                vertices.add(allVertices.get(index));
-            } else {
-                log.warn("Vertex index {} is out of bounds for vertices list size {}", index, allVertices.size());
-            }
-        }
-        return vertices;
-    }
-
-    private Vector3d calculateCentroid(List<GaiaVertex> vertices) {
-        if (vertices == null || vertices.isEmpty()) {
-            return null;
-        }
-
-        Vector3d centroid = new Vector3d();
-        for (GaiaVertex vertex : vertices) {
-            centroid.add(vertex.getPosition());
-        }
-        centroid.div(vertices.size());
-        return centroid;
-    }
-
-    private Vector3d safeNormalize(Vector3d v) {
-        if (v == null || v.lengthSquared() == 0.0) {
-            return null;
-        }
-        return v.normalize(new Vector3d());
     }
 
     private void refineBillboardPlane(BillboardPlane billboardPlane, List<GaiaVertex> sourceVertices) {
@@ -541,106 +390,5 @@ public class BillboardCloudCreator {
         billboardPlane.setNormal(refinedNormal);
         billboardPlane.setCenter(refinedCenter);
         billboardPlane.setPlane(new GaiaPlane(refinedCenter, refinedNormal));
-    }
-
-    private void computePlaneOBB(BillboardPlane billboardPlane, List<GaiaVertex> sourceVertices) {
-        if (billboardPlane == null || billboardPlane.getFaces() == null || billboardPlane.getFaces().isEmpty()) {
-            return;
-        }
-
-        Vector3d normal = new Vector3d(billboardPlane.getNormal());
-        if (normal.lengthSquared() == 0.0) {
-            return;
-        }
-        normal.normalize();
-
-        Vector3d origin = projectPointOntoPlane(new Vector3d(billboardPlane.getCenter()), billboardPlane.getPlane());
-
-        Vector3d tempTangent = createStableTangent(normal);
-        Vector3d tempBitangent = new Vector3d(normal).cross(tempTangent).normalize();
-
-        List<Vector2d> points2D = collectProjectedPoints2D(billboardPlane, sourceVertices, origin, tempTangent, tempBitangent);
-
-        if (points2D.isEmpty()) {
-            return;
-        }
-
-        double meanX = 0.0;
-        double meanY = 0.0;
-        for (Vector2d p : points2D) {
-            meanX += p.x;
-            meanY += p.y;
-        }
-        meanX /= points2D.size();
-        meanY /= points2D.size();
-
-        double xx = 0.0;
-        double xy = 0.0;
-        double yy = 0.0;
-        for (Vector2d p : points2D) {
-            double dx = p.x - meanX;
-            double dy = p.y - meanY;
-            xx += dx * dx;
-            xy += dx * dy;
-            yy += dy * dy;
-        }
-
-        double angle = 0.5 * Math.atan2(2.0 * xy, xx - yy);
-        double cos = Math.cos(angle);
-        double sin = Math.sin(angle);
-
-        Vector3d tangent = new Vector3d(tempTangent).mul(cos).add(new Vector3d(tempBitangent).mul(sin)).normalize();
-        Vector3d bitangent = new Vector3d(normal).cross(tangent).normalize();
-
-        double minU = Double.POSITIVE_INFINITY;
-        double minV = Double.POSITIVE_INFINITY;
-        double maxU = Double.NEGATIVE_INFINITY;
-        double maxV = Double.NEGATIVE_INFINITY;
-
-        for (GaiaFace face : billboardPlane.getFaces()) {
-            List<GaiaVertex> faceVertices = getVerticesFromFace(face, sourceVertices);
-            for (GaiaVertex vertex : faceVertices) {
-                Vector3d projected = projectPointOntoPlane(new Vector3d(vertex.getPosition()), billboardPlane.getPlane());
-                Vector3d diff = new Vector3d(projected).sub(origin);
-
-                double u = diff.dot(tangent);
-                double v = diff.dot(bitangent);
-
-                if (u < minU) {minU = u;}
-                if (u > maxU) {maxU = u;}
-                if (v < minV) {minV = v;}
-                if (v > maxV) {maxV = v;}
-            }
-        }
-
-        billboardPlane.setTangent(tangent);
-        billboardPlane.setBitangent(bitangent);
-        billboardPlane.setMinU(minU);
-        billboardPlane.setMinV(minV);
-        billboardPlane.setMaxU(maxU);
-        billboardPlane.setMaxV(maxV);
-    }
-
-    private List<Vector2d> collectProjectedPoints2D(BillboardPlane billboardPlane, List<GaiaVertex> sourceVertices, Vector3d origin, Vector3d tangent, Vector3d bitangent) {
-        List<Vector2d> points2D = new ArrayList<>();
-
-        for (GaiaFace face : billboardPlane.getFaces()) {
-            List<GaiaVertex> faceVertices = getVerticesFromFace(face, sourceVertices);
-            for (GaiaVertex vertex : faceVertices) {
-                /*Vector3d projected = projectPointOntoPlane(new Vector3d(vertex.getPosition()), billboardPlane.getPlane());
-                Vector3d diff = new Vector3d(projected).sub(origin);
-                double u = diff.dot(tangent);
-                double v = diff.dot(bitangent);*/
-
-                Vector3d projected = projectPointOntoPlane(new Vector3d(vertex.getPosition()), billboardPlane.getPlane());
-                Vector3d diff = new Vector3d(projected).sub(origin);
-                double u = diff.dot(tangent);
-                double v = diff.dot(bitangent);
-
-                points2D.add(new Vector2d(u, v));
-            }
-        }
-
-        return points2D;
     }
 }
