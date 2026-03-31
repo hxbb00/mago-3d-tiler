@@ -22,7 +22,14 @@ class TreeCreatorTest {
         //String inputPath = "D:\\data\\korea-forest-service\\original.glb";
         //String outputPath = "E:\\data\\mago-server\\output\\BillboardCreation\\";
 
-        String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\dt-model.glb";
+        //nak-sample.glb
+
+        String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\nak-sample.glb";
+        //String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\hwal-sample.glb";
+        //String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\jat-sample.glb";
+        //String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\chim-sample.glb";
+
+        //String inputPath = "D:\\data\\mago-3d-tiler\\build-sample\\sample-tree\\dt-model.glb";
         String outputPath = "H:\\workspace\\billboardclouds-output";
         File outputDir = new File(outputPath);
         if (!outputDir.exists() && !outputDir.mkdirs()) {

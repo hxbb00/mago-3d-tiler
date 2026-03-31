@@ -1,7 +1,10 @@
 package com.gaia3d.modifier.billboard.plane;
 
 import com.gaia3d.TilerExtensionModule;
+import com.gaia3d.basic.geometry.GaiaBoundingBox;
 import com.gaia3d.basic.geometry.modifier.transform.GaiaBaker;
+import com.gaia3d.basic.geometry.modifier.transform.GaiaScaler;
+import com.gaia3d.basic.geometry.modifier.transform.GaiaScalerOptions;
 import com.gaia3d.basic.model.GaiaMaterial;
 import com.gaia3d.basic.model.GaiaNode;
 import com.gaia3d.basic.model.GaiaScene;
@@ -18,6 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.joml.Vector3d;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -44,6 +48,28 @@ public class TreeBillboardCreator {
         // Flip Y tex-coordinates
         FlipYTexCoordinate flipYTexCoordinate = new FlipYTexCoordinate();
         gaiaScenes.forEach(flipYTexCoordinate::flip);
+
+        /*GaiaBoundingBox bbox = scene.updateBoundingBox();
+        Vector3d volume = bbox.getVolume();
+        double maxDimension = Math.max(volume.x, Math.max(volume.y, volume.z));
+        GaiaScalerOptions scalerOptions = GaiaScalerOptions.builder().scaleX(1.0 / maxDimension).scaleY(1.0 / maxDimension).scaleZ(1.0 / maxDimension).build();
+        GaiaScaler scaler = new GaiaScaler(scalerOptions);
+        scaler.apply(scene);*/
+
+        // Scale 1.0
+        for (GaiaScene gaiaScene : gaiaScenes) {
+            GaiaBoundingBox bbox = gaiaScene.updateBoundingBox();
+            Vector3d volume = bbox.getVolume();
+            double maxDimension = Math.max(volume.x, Math.max(volume.y, volume.z));
+            GaiaScalerOptions scalerOptions = GaiaScalerOptions.builder()
+                    .scaleX(1.0 / maxDimension)
+                    .scaleY(1.0 / maxDimension)
+                    .scaleZ(1.0 / maxDimension)
+                    .build();
+            GaiaScaler scaler = new GaiaScaler(scalerOptions);
+            scaler.apply(gaiaScene);
+        }
+
 
         TilerExtensionModule tilerExtensionModule = new TilerExtensionModule();
         int verticalPlanesCount = treeBillBoardParameters.getVerticalRectanglesCount();

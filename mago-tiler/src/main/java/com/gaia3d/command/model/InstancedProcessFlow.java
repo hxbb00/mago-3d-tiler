@@ -64,7 +64,7 @@ public class InstancedProcessFlow implements ProcessFlow {
         List<PreProcess> preProcessors = new ArrayList<>();
         preProcessors.add(new TileInfoGenerator());
 
-        preProcessors.add(new GaiaScaler());
+        //preProcessors.add(new GaiaScaler());
         preProcessors.add(new GaiaZUpTransformer());
         preProcessors.add(new GaiaRotator());
         preProcessors.add(new GaiaTransformBaker());
