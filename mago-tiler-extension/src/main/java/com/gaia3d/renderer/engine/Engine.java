@@ -384,6 +384,8 @@ public class Engine {
         int fboHeight = originalImage.getHeight();
         if (fboWidth <= 0 || fboHeight <= 0) return null;
 
+        ScreenQuad localScreenQuad = new ScreenQuad();
+
         try {
             Fbo fbo = fboManager.getOrCreateFbo("default", fboWidth, fboHeight);
             fbo.bind();
@@ -398,9 +400,6 @@ public class Engine {
             glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
             glDisable(GL20.GL_DEPTH_TEST);
 
-            // enable cull face
-            glEnable(GL20.GL_CULL_FACE);
-
             int minFilter = GL20.GL_NEAREST; // GL_LINEAR, GL_NEAREST
             int magFilter = GL20.GL_NEAREST;
             int wrapS = GL20.GL_REPEAT; // GL_CLAMP_TO_EDGE
@@ -409,7 +408,6 @@ public class Engine {
             BufferedImage image = originalImage;
             boolean resizeToPowerOf2 = false;
 
-            GL20.glEnable(GL20.GL_TEXTURE_2D);
             GL20.glActiveTexture(GL20.GL_TEXTURE0);
 
             // shader program
@@ -431,7 +429,8 @@ public class Engine {
                 int textureId = RenderableTexturesUtils.createGlTextureFromBufferedImage(image, minFilter, magFilter, wrapS, wrapT, resizeToPowerOf2);
                 GL20.glBindTexture(GL20.GL_TEXTURE_2D, textureId);
 
-                screenQuad.render();
+                //screenQuad.render();
+                localScreenQuad.render();
 
                 // make the bufferImage
                 image = fbo.getBufferedImage(bufferedImageType);
@@ -449,6 +448,8 @@ public class Engine {
             return image;
         } catch (Exception e) {
             log.error("[ERROR] Error initializing the engine : ", e);
+        } finally {
+            localScreenQuad.cleanup();
         }
 
         return null;
