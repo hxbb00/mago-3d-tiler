@@ -151,16 +151,10 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
                 decimateParameters.setBasicValues(2.0, 0.2, 0.1, 36.0, 1000000, 1, 1.0);
                 screenPixelsForMeter = screenPixelsForMeterLod1;
             } else if (d == 1) {
-                //decimateParameters.setBasicValues(9.0, 0.4, 0.9, 40.0, 1000000, 5, 1.0);
-                //decimateParameters.setBasicValues(9.0, 1.0, 0.9, 40.0, 1000000, 5, 1.0);
-                //decimateParameters.setBasicValues(5.0, 1.2, 0.9, 40.0, 1000000, 5, 1.0);
-                decimateParameters.setBasicValues(14.0, 0.1, 0.9, 40.0, 1000000, 5, 1.0);
+                decimateParameters.setBasicValues(7.0, 0.01, 0.9, 40.0, 1000000, 5, 1.0);
                 screenPixelsForMeter = screenPixelsForMeterLod1;
             } else if (d == 2) {
-                //decimateParameters.setBasicValues(12.0, 0.5, 0.9, 40.0, 1000000, 5, 1.5);
-                //decimateParameters.setBasicValues(12.0, 1.8, 0.9, 40.0, 1000000, 5, 1.5);
-                //decimateParameters.setBasicValues(9.0, 2.0, 0.9, 40.0, 1000000, 5, 1.5);
-                decimateParameters.setBasicValues(22.0, 0.2, 0.9, 40.0, 1000000, 5, 1.5);
+                decimateParameters.setBasicValues(10.0, 0.01, 0.9, 40.0, 1000000, 5, 1.0);
                 screenPixelsForMeter = screenPixelsForMeterLod1 / 2.0;
             } else {
                 decimateParameters.setBasicValues(20.0, 0.8, 1.0, 36.0, 1000000, 5, 2.0);
@@ -895,7 +889,7 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
     public boolean integralDecimateScenes(List<TileInfo> tileInfos, int lod, int nodeDepth, Node rootNode, int maxDepth,
                                           DecimateParameters decimateParameters, double screenPixelsForMeter) {
         // 1rst, find all tileInfos that intersects with the node
-        log.info("Creating netSurface nodes for nodeDepth : " + nodeDepth + " of maxDepth : " + maxDepth);
+        log.info("Creating reMeshed nodes for nodeDepth : " + nodeDepth + " of maxDepth : " + maxDepth);
         List<Node> nodes = new ArrayList<>();
         List<Node> intersectedNodes = new ArrayList<>();
 

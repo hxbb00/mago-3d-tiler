@@ -4,6 +4,7 @@ import com.gaia3d.basic.exchangable.GaiaSet;
 import com.gaia3d.basic.exchangable.SceneInfo;
 import com.gaia3d.basic.geometry.GaiaBoundingBox;
 import com.gaia3d.basic.geometry.entities.GaiaAAPlane;
+import com.gaia3d.basic.geometry.modifier.halfedge.HalfEdgeDecimator;
 import com.gaia3d.basic.geometry.modifier.topology.*;
 import com.gaia3d.basic.geometry.modifier.transform.GaiaBaker;
 import com.gaia3d.basic.geometry.octree.HalfEdgeOctreeFaces;
@@ -886,7 +887,8 @@ public class MainVoxelizer implements IAppLogic {
             gaiaScene.getMaterials().clear();
 
             HalfEdgeScene halfEdgeScene = HalfEdgeUtils.halfEdgeSceneFromGaiaScene(gaiaScene);
-            halfEdgeScene.decimate(decimateParameters);
+            HalfEdgeDecimator decimator = new HalfEdgeDecimator(decimateParameters);
+            decimator.apply(halfEdgeScene);
 
             //**********************************************************************************************************
 
