@@ -5,6 +5,7 @@ import com.gaia3d.basic.exchangable.SceneInfo;
 import com.gaia3d.basic.geometry.GaiaBoundingBox;
 import com.gaia3d.basic.geometry.entities.GaiaAAPlane;
 import com.gaia3d.basic.geometry.modifier.halfedge.HalfEdgeDecimator;
+import com.gaia3d.basic.geometry.modifier.halfedge.HalfEdgeDecimatorSmallTriangles;
 import com.gaia3d.basic.geometry.modifier.topology.*;
 import com.gaia3d.basic.geometry.modifier.transform.GaiaBaker;
 import com.gaia3d.basic.geometry.octree.HalfEdgeOctreeFaces;
@@ -889,6 +890,34 @@ public class MainVoxelizer implements IAppLogic {
             HalfEdgeScene halfEdgeScene = HalfEdgeUtils.halfEdgeSceneFromGaiaScene(gaiaScene);
             HalfEdgeDecimator decimator = new HalfEdgeDecimator(decimateParameters);
             decimator.apply(halfEdgeScene);
+
+            if (lod == 1) {
+                log.debug("  Additional decimation for LOD 1");
+
+                DecimateParameters decimateParametersLod = decimateParameters.clone();
+                decimateParametersLod.setHedgeMinLength(0.01);
+                decimateParametersLod.setIterationsCount(2);
+                decimateParametersLod.setMaxDiffAngDegrees(30.0);
+                decimateParametersLod.setSmallTriangleMinArea(1.9);
+                decimateParametersLod.setSmallTrianglesMinSize(1.4);
+                WeldingParameters weldingParametersLod = decimateParametersLod.getWeldingParameters();
+                weldingParametersLod.setCheckTexCoords(false);
+                HalfEdgeDecimatorSmallTriangles decimatorSmallTriangles = new HalfEdgeDecimatorSmallTriangles(decimateParametersLod);
+                decimatorSmallTriangles.apply(halfEdgeScene);
+            } else if (lod > 1) {
+                log.debug("  Additional decimation for LOD " + lod);
+
+                DecimateParameters decimateParametersLod = decimateParameters.clone();
+                decimateParametersLod.setHedgeMinLength(0.02);
+                decimateParametersLod.setIterationsCount(2);
+                decimateParametersLod.setMaxDiffAngDegrees(40.0);
+                decimateParametersLod.setSmallTriangleMinArea(5.0);
+                decimateParametersLod.setSmallTrianglesMinSize(2.5);
+                WeldingParameters weldingParametersLod = decimateParametersLod.getWeldingParameters();
+                weldingParametersLod.setCheckTexCoords(false);
+                HalfEdgeDecimatorSmallTriangles decimatorSmallTriangles = new HalfEdgeDecimatorSmallTriangles(decimateParametersLod);
+                decimatorSmallTriangles.apply(halfEdgeScene);
+            }
 
             //**********************************************************************************************************
 

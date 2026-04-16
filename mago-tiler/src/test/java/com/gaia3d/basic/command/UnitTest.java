@@ -722,7 +722,7 @@ class UnitTest {
     }
 
     @Test
-    void test_JoGonHee_SangAm() {
+    void SangAm() {
         // someTiles
         String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\SangAm_JoGoNi\\Production_2\\L22\\";
         String outputPath = "C:\\data\\mago-server\\output\\SangAm_JoGoNi\\";
@@ -742,13 +742,13 @@ class UnitTest {
     }
 
     @Test
-    void test_JoGonHee_SangAm_someBuilding
+    void SangAmSomeBuildings
             () {
         // someTiles
 //        "-lon", "126.638872",
 //                "-lat", "37.5329178",
-        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\SangAm_JoGoNi\\Production_2\\L22_121_buildings\\";
-        String outputPath = "C:\\data\\mago-server\\output\\SangAm_JoGoNi_L22_121_buildings\\";
+        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\SangAm_JoGoNi\\Production_2\\L22_9_buildings\\";
+        String outputPath = "E:\\data\\mago-server\\output\\SangAm_9_buildings_20260416\\";
         //String outputPath = "E:\\temp\\";
 
         String[] args = new String[]{
@@ -759,8 +759,7 @@ class UnitTest {
                 "-xOffset", "314050",
                 "-yOffset", "4160814",
                 "--quantize",
-                "-pg",
-                "-leaveTemp"
+                "-pg"
         };
         Mago3DTilerMain.main(args);
     }
