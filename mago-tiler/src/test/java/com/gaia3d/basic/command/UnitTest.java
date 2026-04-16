@@ -575,9 +575,9 @@ class UnitTest {
     }
 
     @Test
-    void test_RealisticMesh_Thailand_Data_N_buildings() {
-        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\RealisticMesh_Thailand_multiTiles\\OBJ25sqkm\\Data\\";
-        String outputPath = "C:\\data\\mago-server\\output\\thailand_All\\";
+    void thailandNBuildings() {
+        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\RealisticMesh_Thailand_multiTiles\\OBJ25sqkm\\Data_4_buildings\\";
+        String outputPath = "E:\\data\\mago-server\\output\\thailand_4_buildings_20260416\\";
 
         String[] args = new String[]{
                 "-i", inputPath,
@@ -789,36 +789,6 @@ class UnitTest {
     }
 
     @Test
-    void test_VoxelizedSolidOctrees() {
-        // someTiles
-        String inputPath = "E:\\data\\VoxlizingProject\\output\\allKoreaSouthJinHun_4326_small\\temp\\octree\\L1\\";
-        String outputPath = "C:\\data\\mago-server\\output\\allKoreaSouthJinHun_4326_small_L1\\";
-
-        String[] args = new String[]{
-                "-i", inputPath,
-                "-inputType", "kml",
-                "-o", outputPath
-        };
-        Mago3DTilerMain.main(args);
-    }
-
-    @Test
-    void test_VoxelizedSolidOctrees_All() {
-        // someTiles
-        for (int i = 0; i <= 10; i++) {
-            String inputPath = "E:\\data\\VoxlizingProject\\output\\allKoreaSouthJinHun_4326_small\\temp\\octree\\L" + i + "\\";
-            String outputPath = "C:\\data\\mago-server\\output\\allKoreaSouthJinHun_4326_small_L" + i + "\\";
-
-            String[] args = new String[]{
-                    "-i", inputPath,
-                    "-inputType", "kml",
-                    "-o", outputPath
-            };
-            Mago3DTilerMain.main(args);
-        }
-    }
-
-    @Test
     void test_voidFolder() {
         // _1building _2buildings _3buildings _4buildings _5buildings _6buildings _someBuildings
         String inputPath = "D:\\data\\mago3dtiler_TESTDATA\\voidFolder\\";
@@ -833,23 +803,6 @@ class UnitTest {
                 "-rx", "90",
         };
         Mago3DTilerMain.main(args);
-    }
-
-    @Test
-    void test_changeBackGroundColor() {
-        LoggingConfiguration.initConsoleLogger();
-        String inputPath = "D:\\data\\mago-server\\output\\pinkTest.png";
-        String outputPath = "D:\\data\\mago-server\\output\\pinkTest_result.jpg";
-
-        BufferedImage image = null;
-        try {
-            image = ImageIO.read(new File(inputPath));
-            BufferedImage newImage = ImageUtils.clampBackGroundColor(image, new Color(255, 0, 255), 1, 50);
-            ImageIO.write(newImage, "jpg", new File(outputPath));
-            log.info("newImage: " + newImage);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Test
@@ -883,8 +836,7 @@ class UnitTest {
     }
 
     @Test
-    void test_thailand1BuildingML() {
-        // hwal-0, jat-0, nak-0, tree-0
+    void ThailandDataNBuildings() {
         String inputPath = "D:\\data\\mago3dtiler_TESTDATA\\RealisticMesh_Thailand_multiTiles\\OBJ25sqkm\\Data_1building\\";
         String outputPath = "D:\\data\\mago-server\\output\\Data_1building\\";
 
