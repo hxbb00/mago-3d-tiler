@@ -1,9 +1,7 @@
 package com.gaia3d.process.preprocess;
 
 import com.gaia3d.basic.exchangable.GaiaSet;
-import com.gaia3d.basic.geometry.modifier.topology.GaiaSceneCleaner;
-import com.gaia3d.basic.geometry.modifier.topology.GaiaWelder;
-import com.gaia3d.basic.geometry.modifier.topology.GaiaWeldOptions;
+import com.gaia3d.basic.geometry.modifier.topology.*;
 import com.gaia3d.basic.model.GaiaScene;
 import com.gaia3d.process.tileprocess.tile.TileInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +16,11 @@ public class PhotogrammetryMinimization implements PreProcess {
         GaiaScene scene = tileInfo.getScene();
 
         if (scene != null) {
-            scene.deleteNormals();
+            GaiaColorCleaner colorCleaner = new GaiaColorCleaner();
+            colorCleaner.apply(scene);
+            GaiaNormalCleaner normalCleaner = new GaiaNormalCleaner();
+            normalCleaner.apply(scene);
+            //scene.deleteNormals();
             // 1rst, must weld vertices
             double error = 1e-4;
             log.info("[Pre][Photogrammetry] Welding vertices in GaiaScene : {}", tileInfo.getTempPath());

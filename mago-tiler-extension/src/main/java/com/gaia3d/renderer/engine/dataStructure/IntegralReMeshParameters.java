@@ -25,12 +25,12 @@ public class IntegralReMeshParameters {
         colorCodeFboMap.clear();
     }
 
-    public void createFBOsObliqueCamera(FboManager fboManager, int fboWidth, int fboHeight) {
-        Fbo colorFbo_ZNEG = fboManager.getOrCreateFbo("ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_XPOS_ZNEG = fboManager.getOrCreateFbo("XPOS_ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_XNEG_ZNEG = fboManager.getOrCreateFbo("XNEG_ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_YPOS_ZNEG = fboManager.getOrCreateFbo("YPOS_ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_YNEG_ZNEG = fboManager.getOrCreateFbo("YNEG_ZNEG", fboWidth, fboHeight);
+    public void createFBOsObliqueCamera(FboManager fboManager, int fboWidth, int fboHeight, int minFilter, int magFilter) {
+        Fbo colorFbo_ZNEG = fboManager.getOrCreateFbo("ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_XPOS_ZNEG = fboManager.getOrCreateFbo("XPOS_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_XNEG_ZNEG = fboManager.getOrCreateFbo("XNEG_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_YPOS_ZNEG = fboManager.getOrCreateFbo("YPOS_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_YNEG_ZNEG = fboManager.getOrCreateFbo("YNEG_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
 
         colorFboMap.put("ZNEG", colorFbo_ZNEG);
         colorFboMap.put("XPOS_ZNEG", colorFbo_XPOS_ZNEG);
@@ -66,16 +66,16 @@ public class IntegralReMeshParameters {
         initFbo(colorCodedFbo_YNEG_ZNEG, colorCodeClearColor, true);
     }
 
-    public void createFBOsObliqueCamera9Directions(FboManager fboManager, int fboWidth, int fboHeight) {
-        Fbo colorFbo_ZNEG = fboManager.getOrCreateFbo("ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_XPOS_ZNEG = fboManager.getOrCreateFbo("XPOS_ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_XNEG_ZNEG = fboManager.getOrCreateFbo("XNEG_ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_YPOS_ZNEG = fboManager.getOrCreateFbo("YPOS_ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_YNEG_ZNEG = fboManager.getOrCreateFbo("YNEG_ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_XPOS_YPOS_ZNEG = fboManager.getOrCreateFbo("XPOS_YPOS_ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_XPOS_YNEG_ZNEG = fboManager.getOrCreateFbo("XPOS_YNEG_ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_XNEG_YPOS_ZNEG = fboManager.getOrCreateFbo("XNEG_YPOS_ZNEG", fboWidth, fboHeight);
-        Fbo colorFbo_XNEG_YNEG_ZNEG = fboManager.getOrCreateFbo("XNEG_YNEG_ZNEG", fboWidth, fboHeight);
+    public void createFBOsObliqueCamera9Directions(FboManager fboManager, int fboWidth, int fboHeight, int minFilter, int magFilter) {
+        Fbo colorFbo_ZNEG = fboManager.getOrCreateFbo("ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_XPOS_ZNEG = fboManager.getOrCreateFbo("XPOS_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_XNEG_ZNEG = fboManager.getOrCreateFbo("XNEG_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_YPOS_ZNEG = fboManager.getOrCreateFbo("YPOS_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_YNEG_ZNEG = fboManager.getOrCreateFbo("YNEG_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_XPOS_YPOS_ZNEG = fboManager.getOrCreateFbo("XPOS_YPOS_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_XPOS_YNEG_ZNEG = fboManager.getOrCreateFbo("XPOS_YNEG_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_XNEG_YPOS_ZNEG = fboManager.getOrCreateFbo("XNEG_YPOS_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
+        Fbo colorFbo_XNEG_YNEG_ZNEG = fboManager.getOrCreateFbo("XNEG_YNEG_ZNEG", fboWidth, fboHeight, minFilter, magFilter);
 
         colorFboMap.put("ZNEG", colorFbo_ZNEG);
         colorFboMap.put("XPOS_ZNEG", colorFbo_XPOS_ZNEG);

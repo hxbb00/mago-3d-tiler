@@ -191,8 +191,6 @@ class I3dmReleaseTest {
         MagoTestConfig.execute(args);
     }
 
-
-
     @Test
     void instanced06add() {
         String path = "I04-forest-shp";

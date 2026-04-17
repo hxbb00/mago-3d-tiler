@@ -335,6 +335,8 @@ public class GaiaTextureCoordinator {
                 GaiaBuffer texcoordBuffer = materialBufferDataSet.getBuffers().get(AttributeType.TEXCOORD);
                 if (texcoordBuffer != null) {
                     float[] texcoords = texcoordBuffer.getFloats();
+
+                    // test check.***
                     for (int i = 0; i < texcoords.length; i += 2) {
                         float originX = texcoords[i];
                         float originY = texcoords[i + 1];
@@ -452,7 +454,13 @@ public class GaiaTextureCoordinator {
                 log.debug(" - lodLevel : {}", lodLevel);
                 log.debug("==================================");
                 ImageResizer imageResizer = new ImageResizer();
-                this.atlasImage = imageResizer.resizeImageGraphic2D(this.atlasImage, imageWidth, imageHeight, true);
+                this.atlasImage = imageResizer.resizeMultiStepSmart(this.atlasImage, imageWidth, imageHeight);
+//                if (lodLevel == 0) {
+//                    this.atlasImage = imageResizer.resizeImageGraphic2D(this.atlasImage, imageWidth, imageHeight, true);
+//                } else {
+//                    //this.atlasImage = imageResizer.resizeMultiStepSmart(this.atlasImage, imageWidth, imageHeight);
+//                    this.atlasImage = imageResizer.resizeImageGraphic2D(this.atlasImage, imageWidth, imageHeight, true);
+//                }
             }
         }
 
@@ -463,7 +471,6 @@ public class GaiaTextureCoordinator {
 
         return this.atlasImage;
     }
-
 
     private void writeAtlasImageForTest(boolean existPngTextures, LevelOfDetail lod, String suffix) {
         String extension = "jpg";

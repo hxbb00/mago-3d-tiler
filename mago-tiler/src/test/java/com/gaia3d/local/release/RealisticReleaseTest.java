@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 @Tag("release")
 @Slf4j
 class RealisticReleaseTest {
-    @Disabled
     @Test
     void realistic00() {
         String path = "R00-bansong-obj";
@@ -178,6 +177,7 @@ class RealisticReleaseTest {
         };
         MagoTestConfig.execute(args);
     }
+
 
     private void execute(String[] args) {
         Mago3DTilerMain.main(args);

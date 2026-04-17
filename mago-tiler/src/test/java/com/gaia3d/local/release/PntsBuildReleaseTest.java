@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+
 @Tag("release")
 @Slf4j
 class PntsBuildReleaseTest {
@@ -96,5 +98,49 @@ class PntsBuildReleaseTest {
                 "-crs", "5187",
         };
         MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void asan_dunpo() {
+        String inputFolder = "D:\\data\\mago-3d-tiler\\temp-sample\\아산-둔포면";
+        String outputPath = "H:\\workspace\\mago-server\\output\\asan-dunpo\\";
+        File inputFolderFile = new File(inputFolder);
+        File[] files = inputFolderFile.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile()) {
+                    String inputPath = file.getAbsolutePath();
+                    String outputPathFull = outputPath + "file-" + file.getName().replaceAll("\\.[^.]+$", "");
+                    String[] args = {
+                            "-i", inputPath,
+                            "-o", outputPathFull,
+                            "-crs", "5186",
+                    };
+                    MagoTestConfig.execute(args);
+                }
+            }
+        }
+    }
+
+    @Test
+    void asan_eumbong() {
+        String inputFolder = "D:\\data\\mago-3d-tiler\\temp-sample\\아산-음봉면";
+        String outputPath = "H:\\workspace\\mago-server\\output\\asan-eumbong\\";
+        File inputFolderFile = new File(inputFolder);
+        File[] files = inputFolderFile.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile()) {
+                    String inputPath = file.getAbsolutePath();
+                    String outputPathFull = outputPath + "file-" + file.getName().replaceAll("\\.[^.]+$", "");
+                    String[] args = {
+                            "-i", inputPath,
+                            "-o", outputPathFull,
+                            "-crs", "5186",
+                    };
+                    MagoTestConfig.execute(args);
+                }
+            }
+        }
     }
 }

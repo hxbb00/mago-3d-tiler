@@ -2,9 +2,11 @@ package com.gaia3d.local;
 
 import com.gaia3d.command.mago.GlobalOptions;
 import com.gaia3d.command.mago.Mago3DTilerMain;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 
+@Slf4j
 public class MagoTestConfig {
     //public static final String OUTPUT_PATH = "E:/data/mago-server/output";
     public static final String OUTPUT_PATH = "H:/workspace/mago-server/output";
@@ -14,6 +16,7 @@ public class MagoTestConfig {
     public static final String TERRAIN_PATh = "D:/data/mago-3d-tiler/terrain-sample";
 
     public static void execute(String[] args) {
+        log.info("Executing Mago3DTilerMain with arguments: {}", String.join(" ", args));
         GlobalOptions.recreateInstance();
         Mago3DTilerMain.main(args);
     }

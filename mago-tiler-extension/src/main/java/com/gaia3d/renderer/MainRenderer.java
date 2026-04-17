@@ -240,6 +240,7 @@ public class MainRenderer implements IAppLogic {
         HalfEdgeScene halfEdgeScene = halfEdgeScenes.get(0); // only one scene
         HalfEdgeDecimator decimator = new HalfEdgeDecimator(decimateParameters);
         decimator.apply(halfEdgeScene);
+
         boolean scissorTextures = false;
         List<HalfEdgeScene> resultCutHalfEdgeScenes = HalfEdgeCutter.cutHalfEdgeSceneByGaiaAAPlanes(halfEdgeScene, cuttingPlanes, octree, scissorTextures, false);
 
@@ -519,7 +520,7 @@ public class MainRenderer implements IAppLogic {
 
                 glViewport(0, 0, width[0], height[0]);
                 colorFbo.bind();
-                log.info("Rendering the scene : " + i + " of scenesCount : " + scenesCount);
+                log.debug("Rendering the scene : " + i + " of scenesCount : " + scenesCount);
                 engine.getRenderSceneImage(sceneShaderProgram);
                 colorFbo.unbind();
 

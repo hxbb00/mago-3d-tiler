@@ -127,7 +127,7 @@ public class GlobalOptions {
     private boolean isLeaveTemp = false;
     private byte multiThreadCount = 3;
 
-    private GlobalOptions () {
+    private GlobalOptions() {
         // Private constructor for singleton
     }
 
@@ -421,10 +421,14 @@ public class GlobalOptions {
         boolean isParametric = inputFormat.equals(FormatType.GEOJSON) || inputFormat.equals(FormatType.SHP) || inputFormat.equals(FormatType.CITYGML) || inputFormat.equals(FormatType.INDOORGML) || inputFormat.equals(FormatType.GEO_PACKAGE);
         instance.setParametric(isParametric);
 
+        if (outputFormat.equals(FormatType.FOREST) || outputFormat.equals(FormatType.I3DM)) {
+            instance.setParametric(false);
+        }
         if (outputFormat.equals(FormatType.FOREST)) {
             isRefineAdd = true;
             instance.setTilesVersion("1.0");
         }
+
         if (isParametric) {
             if (outputFormat.equals(FormatType.B3DM)) {
                 isRefineAdd = true;
@@ -468,7 +472,7 @@ public class GlobalOptions {
         }
     }
 
-    private static void initVersionInfo() {
+    protected static void initVersionInfo() {
         String javaVersion = System.getProperty("java.version");
         String javaVendor = System.getProperty("java.vendor");
         String javaVersionInfo = "JAVA Version : " + javaVersion + " (" + javaVendor + ") ";
@@ -485,6 +489,14 @@ public class GlobalOptions {
         instance.setMaxHeapMemory(Runtime.getRuntime().maxMemory());
     }
 
+    protected static void checkHeapMemory() {
+        long maxMemory = Runtime.getRuntime().maxMemory();
+        long recommendedMemory = GlobalConstants.DEFAULT_RECOMMENDED_MEMORY;
+        if (maxMemory < recommendedMemory) {
+            log.warn("Maximum memory is less than the recommended 16GB. Current max memory: {} GB. \n Consider allocating more memory for better performance.", maxMemory / (1024 * 1024 * 1024));
+        }
+    }
+
     public long getProcessTimeMillis() {
         long endTimeMillis = System.currentTimeMillis();
         long processTimeMillis = endTimeMillis - startTimeMillis;
@@ -492,76 +504,78 @@ public class GlobalOptions {
         return processTimeMillis;
     }
 
-    public void printDebugOptions() {
-        log.info("Java Version Info: {}", javaVersionInfo);
-        log.info("Program Info: {}", programInfo);
-        log.info("Available Processors: {}", availableProcessors);
-        log.info("Max Heap Memory: {} MB", maxHeapMemory / (1024 * 1024));
+    protected static void printDebugOptions() {
+        log.info("Java Version Info: {}", instance.javaVersionInfo);
+        log.info("Program Info: {}", instance.programInfo);
+        log.info("Available Processors: {}", instance.availableProcessors);
+        log.info("Max Heap Memory: {} MB", instance.maxHeapMemory / (1024 * 1024));
+        checkHeapMemory();
+
         Mago3DTilerMain.drawLine();
-        log.info("3DTiles Version: {}", tilesVersion);
-        log.info("Input Path: {}", inputPath);
-        log.info("Output Path: {}", outputPath);
-        log.info("Temp path: {}", tempPath);
-        log.info("Input Format: {}", inputFormat);
-        log.info("Output Format: {}", outputFormat);
-        if (FormatType.I3DM.equals(outputFormat)) {
-            log.info("Instance File Path: {}", instancePath);
+        log.info("3DTiles Version: {}", instance.tilesVersion);
+        log.info("Input Path: {}", instance.inputPath);
+        log.info("Output Path: {}", instance.outputPath);
+        log.info("Temp path: {}", instance.tempPath);
+        log.info("Input Format: {}", instance.inputFormat);
+        log.info("Output Format: {}", instance.outputFormat);
+        if (FormatType.I3DM.equals(instance.outputFormat)) {
+            log.info("Instance File Path: {}", instance.instancePath);
         }
-        log.info("Terrain File Path: {}", terrainPath);
-        if (geoidPath == null) {
+        log.info("Terrain File Path: {}", instance.terrainPath);
+        if (instance.geoidPath == null) {
             log.info("Geoid Model(Height Reference): Ellipsoid");
-        } else if (geoidPath.contains("egm96")) {
+        } else if (instance.geoidPath.contains("egm96")) {
             log.info("Geoid Model(Height Reference): EGM96");
         } else {
-            log.info("Geoid Model(Height Reference): Custom -, {}, ", geoidPath);
+            log.info("Geoid Model(Height Reference): Custom -, {}, ", instance.geoidPath);
         }
-        log.info("Log File Path: {}", logPath);
-        log.info("Recursive Path Search: {}", recursive);
-        if (!forceCrs) {
+        log.info("Log File Path: {}", instance.logPath);
+        log.info("Recursive Path Search: {}", instance.recursive);
+        if (!instance.forceCrs) {
             log.info("Source Coordinate Reference System: Auto Detection");
         } else {
-            log.info("Source Coordinate Reference System: Forced {}", sourceCrs);
+            log.info("Source Coordinate Reference System: Forced {}", instance.sourceCrs);
         }
-        log.info("Proj4 Code: {}", proj);
-        log.info("Debug Mode: {}", debug);
+        log.info("Proj4 Code: {}", instance.proj);
+        log.info("Debug Mode: {}", instance.debug);
         Mago3DTilerMain.drawLine();
-        if (!debug) {
+        if (!instance.debug) {
             return;
         }
-        log.info("Leave Temp Files: {}", isLeaveTemp);
-        log.info("RefineAdd: {}", refineAdd);
-        log.info("Minimum LOD: {}", minLod);
-        log.info("Maximum LOD: {}", maxLod);
-        log.info("Minimum GeometricError: {}", minGeometricError);
-        log.info("Maximum GeometricError: {}", maxGeometricError);
-        log.info("Maximum number of points per a tile: {}", maximumPointPerTile);
-        log.info("Source Precision: {}", isSourcePrecision);
-        log.info("Debug LOD: {}", debugLod);
-        log.info("Debug GLB: {}", glb);
-        log.info("isClassicTransformMatrix: {}", classicTransformMatrix);
-        log.info("Multi-Thread Count: {}", multiThreadCount);
+        log.info("Leave Temp Files: {}", instance.isLeaveTemp);
+        log.info("RefineAdd: {}", instance.refineAdd);
+        log.info("Minimum LOD: {}", instance.minLod);
+        log.info("Maximum LOD: {}", instance.maxLod);
+        log.info("Minimum GeometricError: {}", instance.minGeometricError);
+        log.info("Maximum GeometricError: {}", instance.maxGeometricError);
+        log.info("Maximum number of points per a tile: {}", instance.maximumPointPerTile);
+        log.info("Source Precision: {}", instance.isSourcePrecision);
+        log.info("Debug LOD: {}", instance.debugLod);
+        log.info("Debug GLB: {}", instance.glb);
+        log.info("isClassicTransformMatrix: {}", instance.classicTransformMatrix);
+        log.info("Multi-Thread Count: {}", instance.multiThreadCount);
         Mago3DTilerMain.drawLine();
-        log.info("Mesh Quantization: {}", useQuantization);
-        log.info("Rotate X-Axis: {}", rotateX);
-        log.info("Flip Coordinate: {}", flipCoordinate);
-        log.info("Ignore Textures: {}", ignoreTextures);
-        log.info("Max Triangles: {}", maxTriangles);
-        log.info("Max Instance Size: {}", maxInstance);
-        log.info("Max Node Depth: {}", maxNodeDepth);
-        log.info("isPhotogrammetry: {}", isPhotogrammetry);
+        log.info("Mesh Quantization: {}", instance.useQuantization);
+        log.info("Rotate X-Axis: {}", instance.rotateX);
+        log.info("Flip Coordinate: {}", instance.flipCoordinate);
+        log.info("Ignore Textures: {}", instance.ignoreTextures);
+        log.info("Max Triangles: {}", instance.maxTriangles);
+        log.info("Max Instance Size: {}", instance.maxInstance);
+        log.info("Max Node Depth: {}", instance.maxNodeDepth);
+        log.info("isPhotogrammetry: {}", instance.isPhotogrammetry);
         Mago3DTilerMain.drawLine();
-        log.info("PointCloud Ratio: {}", pointRatio);
+        log.info("PointCloud Ratio: {}", instance.pointRatio);
         log.info("Point Cloud Horizontal Grid: {}", GlobalConstants.POINTSCLOUD_HORIZONTAL_GRID);
         log.info("Point Cloud Vertical Grid: {}", GlobalConstants.POINTSCLOUD_VERTICAL_GRID);
-        log.info("Force 4Byte RGB: {}", force4ByteRGB);
+        log.info("Force 4Byte RGB: {}", instance.force4ByteRGB);
         Mago3DTilerMain.drawLine();
-        log.info("Height Column: {}", heightColumn);
-        log.info("Altitude Column: {}", altitudeColumn);
-        log.info("Heading Column: {}", headingColumn);
-        log.info("Diameter Column: {}", diameterColumn);
-        log.info("Absolute Altitude: {}", absoluteAltitude);
-        log.info("Minimum Height: {}", minimumHeight);
-        log.info("Skirt Height: {}", skirtHeight);
+        log.info("Height Column: {}", instance.heightColumn);
+        log.info("Altitude Column: {}", instance.altitudeColumn);
+        log.info("Heading Column: {}", instance.headingColumn);
+        log.info("Diameter Column: {}", instance.diameterColumn);
+        log.info("Absolute Altitude: {}", instance.absoluteAltitude);
+        log.info("Minimum Height: {}", instance.minimumHeight);
+        log.info("Skirt Height: {}", instance.skirtHeight);
         Mago3DTilerMain.drawLine();
     }
 }

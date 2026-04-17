@@ -39,8 +39,12 @@ public class GeoDataCubeExperimentalTest {
         testAutoVoxels(path, path + "-all-level", 3);
     }
 
-    //voxel-korea-all
 
+    @Test
+    void seoulIctwayLas() {
+        String path = "ictway-las";
+        testAutoVoxels(path, path + "-all-level", 0, 20);
+    }
 
     @Test
     void seoulVworld3dTiles() {
@@ -93,7 +97,7 @@ public class GeoDataCubeExperimentalTest {
     @Test
     void pointcloudTemple() {
         String path = "pointcloud-temple";
-        testAutoVoxels(path, path + "-all-level", 15);
+        testAutoVoxels(path, path + "-all-level", 20);
     }
 
     @Test

@@ -63,12 +63,10 @@ public class ShaderManager {
             return "";
         }
         byte[] bytes = null;
+
         try {
             bytes = resourceAsStream.readAllBytes();
         } catch (IOException e) {
-            log.error("[ERROR] Error reading resource: {}", e);
-        }
-        if (bytes == null) {
             return "";
         }
         return new String(bytes, StandardCharsets.UTF_8);

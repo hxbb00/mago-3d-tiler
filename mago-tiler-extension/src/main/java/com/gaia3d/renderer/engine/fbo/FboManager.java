@@ -22,6 +22,12 @@ public class FboManager {
         return fbo;
     }
 
+    public Fbo createFbo(String name, int fboWidth, int fboHeight, int minFilter, int magFilter) {
+        Fbo fbo = new Fbo(name, fboWidth, fboHeight, minFilter, magFilter);
+        mapNameFbos.put(name, fbo);
+        return fbo;
+    }
+
     public FboMRT createFboMRT(String name, int fboWidth, int fboHeight, int numColorAttachments) {
         if (mapNameFboMRTs == null) {
             mapNameFboMRTs = new HashMap<>();
@@ -41,8 +47,19 @@ public class FboManager {
             deleteFbo(name);
             fbo = createFbo(name, fboWidth, fboHeight);
         }
-        //fbo.resize(fboWidth, fboHeight);
+        return fbo;
+    }
 
+    public Fbo getOrCreateFbo(String name, int fboWidth, int fboHeight, int minFilter, int magFilter) {
+        Fbo fbo = getFbo(name);
+        if (fbo == null) {
+            fbo = createFbo(name, fboWidth, fboHeight, minFilter, magFilter);
+        }
+
+        if (fbo.getFboWidth() != fboWidth || fbo.getFboHeight() != fboHeight) {
+            deleteFbo(name);
+            fbo = createFbo(name, fboWidth, fboHeight);
+        }
         return fbo;
     }
 

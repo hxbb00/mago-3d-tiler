@@ -79,7 +79,6 @@ public class RenderableTexturesUtils {
         // TYPE_USHORT_565_RGB,
         // TYPE_USHORT_555_RGB,
         // TYPE_CUSTOM
-
         int glFormat = -1; // GL_RGB, GL_RGBA, etc.
         if (format == TYPE_INT_RGB) {
             glFormat = GL_RGB;
@@ -119,12 +118,14 @@ public class RenderableTexturesUtils {
                     rgbaByteArray[i * 4 + 2] = (byte) ((value >> 8) & 0xFF);        // Green
                     rgbaByteArray[i * 4 + 3] = (byte) (value & 0xFF); // Blue
                 }
+            } else {
+                // Unsupported format for DataBufferInt
+                throw new IllegalArgumentException("Unsupported BufferedImage format for DataBufferInt: " + format);
             }
         } else {
             // DataBufferByte
             rgbaByteArray = ((DataBufferByte) bufferedImage.getRaster().getDataBuffer()).getData();
         }
-
 
         if (format == TYPE_INT_ARGB) {
             // change byte order
@@ -156,10 +157,7 @@ public class RenderableTexturesUtils {
                 rgbaByteArray[i + 2] = temp;
             }
         }
-        int textureId = createGlTextureFromByteArray(rgbaByteArray, width, height, glFormat, minFilter, magFilter, wrapS, wrapT);
 
-        return textureId;
+        return createGlTextureFromByteArray(rgbaByteArray, width, height, glFormat, minFilter, magFilter, wrapS, wrapT);
     }
-
-
 }

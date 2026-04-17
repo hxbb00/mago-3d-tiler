@@ -384,6 +384,8 @@ public class Engine {
         int fboHeight = originalImage.getHeight();
         if (fboWidth <= 0 || fboHeight <= 0) return null;
 
+        ScreenQuad localScreenQuad = new ScreenQuad();
+
         try {
             Fbo fbo = fboManager.getOrCreateFbo("default", fboWidth, fboHeight);
             fbo.bind();
@@ -398,9 +400,6 @@ public class Engine {
             glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
             glDisable(GL20.GL_DEPTH_TEST);
 
-            // enable cull face
-            glEnable(GL20.GL_CULL_FACE);
-
             int minFilter = GL20.GL_NEAREST; // GL_LINEAR, GL_NEAREST
             int magFilter = GL20.GL_NEAREST;
             int wrapS = GL20.GL_REPEAT; // GL_CLAMP_TO_EDGE
@@ -409,7 +408,6 @@ public class Engine {
             BufferedImage image = originalImage;
             boolean resizeToPowerOf2 = false;
 
-            GL20.glEnable(GL20.GL_TEXTURE_2D);
             GL20.glActiveTexture(GL20.GL_TEXTURE0);
 
             // shader program
@@ -431,7 +429,8 @@ public class Engine {
                 int textureId = RenderableTexturesUtils.createGlTextureFromBufferedImage(image, minFilter, magFilter, wrapS, wrapT, resizeToPowerOf2);
                 GL20.glBindTexture(GL20.GL_TEXTURE_2D, textureId);
 
-                screenQuad.render();
+                //screenQuad.render();
+                localScreenQuad.render();
 
                 // make the bufferImage
                 image = fbo.getBufferedImage(bufferedImageType);
@@ -449,6 +448,8 @@ public class Engine {
             return image;
         } catch (Exception e) {
             log.error("[ERROR] Error initializing the engine : ", e);
+        } finally {
+            localScreenQuad.cleanup();
         }
 
         return null;
@@ -502,7 +503,7 @@ public class Engine {
         int count = 0;
         boolean testBool = false;
         for (Map.Entry<Integer, List<HalfEdgeFace>> entry : facesClassificationMap.entrySet()) {
-            log.info("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
+            log.debug("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
 
             int classificationId = entry.getKey();
             List<HalfEdgeFace> facesList = entry.getValue();
@@ -607,7 +608,7 @@ public class Engine {
         int count = 0;
         boolean testBool = false;
         for (Map.Entry<Integer, List<HalfEdgeFace>> entry : facesClassificationMap.entrySet()) {
-            log.info("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
+            log.debug("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
 
             int classificationId = entry.getKey();
             List<HalfEdgeFace> facesList = entry.getValue();
@@ -719,7 +720,7 @@ public class Engine {
         int count = 0;
         boolean testBool = false;
         for (Map.Entry<Integer, List<HalfEdgeFace>> entry : facesClassificationMap.entrySet()) {
-            log.info("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
+            log.debug("makeBoxTexturesByObliqueCamera : " + count + " / " + classifiedFacesCount);
             FaceVisibilityDataManager faceVisibilityDataManager = new FaceVisibilityDataManager();
             int classificationId = entry.getKey();
             List<HalfEdgeFace> facesList = entry.getValue();
@@ -1312,7 +1313,7 @@ public class Engine {
         v1.setPosition(new Vector3d(pos1ModelCoords.x, pos1ModelCoords.y, pos1ModelCoords.z));
         v2.setPosition(new Vector3d(pos2ModelCoords.x, pos2ModelCoords.y, pos2ModelCoords.z));
         v3.setPosition(new Vector3d(pos3ModelCoords.x, pos3ModelCoords.y, pos3ModelCoords.z));
-        v4.setPosition(new Vector3d(modelCenter.x, modelCenter.y, pos3ModelCoords.z + 0.1)); // top center vertex
+        v4.setPosition(new Vector3d(modelCenter.x, modelCenter.y, pos3ModelCoords.z + 0.05)); // top center vertex
 
         // set texCoords
         v0.setTexcoords(new Vector2d(0.0, 1.0 - 0.0)); // invert the texCoordY
@@ -1864,7 +1865,7 @@ public class Engine {
 
         ShaderProgram colorCodeShaderProgram = shaderManager.getShaderProgram("trianglesDelimitedColorCode");
         colorCodeShaderProgram.bind();
-        uniformsMap = sceneShaderProgram.getUniformsMap();
+        uniformsMap = colorCodeShaderProgram.getUniformsMap();
         uniformsMap.setUniform3fv("bboxMin", new Vector3f((float) expandedBBox.getMinX(), (float) expandedBBox.getMinY(), (float) expandedBBox.getMinZ()));
         uniformsMap.setUniform3fv("bboxMax", new Vector3f((float) expandedBBox.getMaxX(), (float) expandedBBox.getMaxY(), (float) expandedBBox.getMaxZ()));
 
@@ -2045,7 +2046,7 @@ public class Engine {
 
         ShaderProgram colorCodeShaderProgram = shaderManager.getShaderProgram("trianglesDelimitedColorCode");
         colorCodeShaderProgram.bind();
-        uniformsMap = sceneShaderProgram.getUniformsMap();
+        uniformsMap = colorCodeShaderProgram.getUniformsMap();
         uniformsMap.setUniform3fv("bboxMin", new Vector3f((float) expandedBBox.getMinX(), (float) expandedBBox.getMinY(), (float) expandedBBox.getMinZ()));
         uniformsMap.setUniform3fv("bboxMax", new Vector3f((float) expandedBBox.getMaxX(), (float) expandedBBox.getMaxY(), (float) expandedBBox.getMaxZ()));
         clearColor.set(1.0f, 1.0f, 1.0f, 1.0f);

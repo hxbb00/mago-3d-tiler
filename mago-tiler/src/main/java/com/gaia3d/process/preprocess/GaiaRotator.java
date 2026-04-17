@@ -4,11 +4,13 @@ import com.gaia3d.basic.model.GaiaScene;
 import com.gaia3d.command.mago.GlobalOptions;
 import com.gaia3d.basic.geometry.modifier.transform.UpAxisTransformer;
 import com.gaia3d.process.tileprocess.tile.TileInfo;
+import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @NoArgsConstructor
+@AllArgsConstructor
 public class GaiaRotator implements PreProcess {
     private GaiaScene recentScene = null;
 

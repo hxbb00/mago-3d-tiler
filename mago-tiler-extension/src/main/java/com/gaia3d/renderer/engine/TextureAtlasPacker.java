@@ -11,7 +11,6 @@ public class TextureAtlasPacker {
     private final GaiaRectangle currentBoundary;
 
     public TextureAtlasPacker() {
-        //freeRectangles.add(new GaiaRectangle(0, 0, 0, 0));
         currentBoundary = new GaiaRectangle(0, 0, 0, 0);
     }
 
@@ -66,9 +65,7 @@ public class TextureAtlasPacker {
             GaiaRectangle newFreeRect = createNewFreeRectangle(texScissorData.getOriginalBoundary());
             freeRectangles.add(newFreeRect);
             bestRect = newFreeRect;
-            //return false;
         }
-
 
         // set position to rect
         texScissorData.setBatchedBoundary(new GaiaRectangle(bestRect.getMinX(), bestRect.getMinY(), bestRect.getMinX() + rectWidth, bestRect.getMinY() + rectHeight));
@@ -77,7 +74,6 @@ public class TextureAtlasPacker {
 
         // split the free rect
         splitFreeRects(bestRect, texScissorData.getBatchedBoundary());
-
         return true;
     }
 
@@ -105,14 +101,14 @@ public class TextureAtlasPacker {
     private void splitFreeRects(GaiaRectangle freeRect, GaiaRectangle placedRect) {
         freeRectangles.remove(freeRect);
 
-        int rigthWidth = (int) (freeRect.getWidth() - placedRect.getWidth());
+        int rightWidth = (int) (freeRect.getWidth() - placedRect.getWidth());
         int bottomHeight = (int) (freeRect.getHeight() - placedRect.getHeight());
 
-        if (rigthWidth < bottomHeight) {
+        if (rightWidth < bottomHeight) {
             // split the free rect horizontally
             double x = freeRect.getMinX() + placedRect.getWidth();
             double y = freeRect.getMinY();
-            GaiaRectangle freeRect1 = new GaiaRectangle(x, y, x + rigthWidth, y + placedRect.getHeight());
+            GaiaRectangle freeRect1 = new GaiaRectangle(x, y, x + rightWidth, y + placedRect.getHeight());
             x = freeRect.getMinX();
             y = freeRect.getMinY() + placedRect.getHeight();
             GaiaRectangle freeRect2 = new GaiaRectangle(x, y, x + freeRect.getWidth(), y + bottomHeight);
@@ -125,7 +121,7 @@ public class TextureAtlasPacker {
             GaiaRectangle freeRect1 = new GaiaRectangle(x, y, x + placedRect.getWidth(), y + bottomHeight);
             x = freeRect.getMinX() + placedRect.getWidth();
             y = freeRect.getMinY();
-            GaiaRectangle freeRect2 = new GaiaRectangle(x, y, x + rigthWidth, y + freeRect.getHeight());
+            GaiaRectangle freeRect2 = new GaiaRectangle(x, y, x + rightWidth, y + freeRect.getHeight());
             freeRectangles.add(freeRect1);
             freeRectangles.add(freeRect2);
         }

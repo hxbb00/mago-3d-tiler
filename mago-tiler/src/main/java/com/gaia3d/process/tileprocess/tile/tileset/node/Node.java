@@ -609,4 +609,59 @@ public class Node {
 
         return bboxLC;
     }
+
+    @JsonIgnore
+    public int getMaxDepth() {
+        return fineMaxDepth(this);
+    }
+
+    @JsonIgnore
+    public void refineDepth() {
+        setDepthRecursive(this, 0);
+    }
+
+    @JsonIgnore
+    public void refineParentNode() {
+        setParentNodeRecursive(this, null);
+    }
+
+    @JsonIgnore
+    private void setDepthRecursive(Node currentNode, int depth) {
+        currentNode.setDepth(depth);
+        if (currentNode.getChildren() != null) {
+            for (Node child : currentNode.getChildren()) {
+                setDepthRecursive(child, depth + 1);
+            }
+        }
+    }
+
+    @JsonIgnore
+    private void setParentNodeRecursive(Node currentNode, Node parentNode) {
+        currentNode.setParent(parentNode);
+        if (currentNode.getChildren() != null) {
+            for (Node child : currentNode.getChildren()) {
+                setParentNodeRecursive(child, currentNode);
+            }
+        }
+    }
+
+    @JsonIgnore
+    private int fineMaxDepth(Node node) {
+        return findMaxDepth(node, 1);
+    }
+
+    @JsonIgnore
+    private int findMaxDepth(Node node, int currentDepth) {
+        if (node.getChildren() == null || node.getChildren().isEmpty()) {
+            return currentDepth;
+        }
+        int maxDepth = currentDepth;
+        for (Node child : node.getChildren()) {
+            int childDepth = findMaxDepth(child, currentDepth + 1);
+            if (childDepth > maxDepth) {
+                maxDepth = childDepth;
+            }
+        }
+        return maxDepth;
+    }
 }

@@ -34,12 +34,12 @@ import java.util.stream.Collectors;
 @SuppressWarnings("ALL")
 @Slf4j
 @NoArgsConstructor
-public class TreeInstanceTiler extends DefaultTiler implements Tiler {
+public class ForestInstanceTiler extends DefaultTiler implements Tiler {
 
     private static final GlobalOptions globalOptions = GlobalOptions.getInstance();
-    private final double maximumGeometricError = 64.0;
+    private final double maximumGeometricError = 128;
     private double instanceGeometricError = 1.0;
-    private final double maximumDistance = 1000.0; // 1km
+    private final double maximumDistance = 1000.0; // 250m
 
     @Override
     public Tileset run(List<TileInfo> tileInfos) {

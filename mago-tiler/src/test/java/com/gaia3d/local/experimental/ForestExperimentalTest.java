@@ -1,5 +1,6 @@
 package com.gaia3d.local.experimental;
 
+import com.gaia3d.command.mago.GlobalOptions;
 import com.gaia3d.local.MagoTestConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
@@ -279,6 +280,97 @@ public class ForestExperimentalTest {
                 "--tilesVersion", "1.0",
                 "-instance", MagoTestConfig.getSsdInputPath(path).getAbsolutePath() + "/instance.glb",
                 //"-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void garisan() {
+        GlobalOptions.recreateInstance();
+        garisanChim();
+        GlobalOptions.recreateInstance();
+        garisanHwal();
+        GlobalOptions.recreateInstance();
+        garisanJat();
+        GlobalOptions.recreateInstance();
+        garisanNak();
+    }
+
+    @Test
+    void garisanMerge() {
+        String path = "garisan";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-merge",
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void garisanChim() {
+        String path = "garisan/Chim";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-c", "5187",
+                "-ot", "i3dm",
+                "-refineAdd",
+                "--scaleColumn", "TreeHeight",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath("garisan").getAbsolutePath() + "/chim.glb",
+                "-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void garisanHwal() {
+        String path = "garisan/Hwal";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-c", "5187",
+                "-ot", "i3dm",
+                "-refineAdd",
+                "--scaleColumn", "TreeHeight",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath("garisan").getAbsolutePath() + "/hwal.glb",
+                "-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void garisanJat() {
+        String path = "garisan/Jat";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-c", "5187",
+                "-ot", "i3dm",
+                "-refineAdd",
+                "--scaleColumn", "TreeHeight",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath("garisan").getAbsolutePath() + "/jat.glb",
+                "-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
+        };
+        MagoTestConfig.execute(args);
+    }
+
+    @Test
+    void garisanNak() {
+        String path = "garisan/Nak";
+        String[] args = new String[]{
+                "-i", MagoTestConfig.getSsdInputPath(path).getAbsolutePath(),
+                "-o", MagoTestConfig.getOutputPath(path).getAbsolutePath(),
+                "-c", "5187",
+                "-ot", "i3dm",
+                "-refineAdd",
+                "--scaleColumn", "TreeHeight",
+                "--tilesVersion", "1.0",
+                "-instance", MagoTestConfig.getSsdInputPath("garisan").getAbsolutePath() + "/nak.glb",
+                "-terrain", MagoTestConfig.getSsdInputPath("dem05-cog.tif").getAbsolutePath(),
         };
         MagoTestConfig.execute(args);
     }

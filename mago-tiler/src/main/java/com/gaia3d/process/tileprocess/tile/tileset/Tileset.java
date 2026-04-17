@@ -19,9 +19,9 @@ import java.util.List;
 public class Tileset {
     private AssetV1 asset;
     @JsonInclude(JsonInclude.Include.USE_DEFAULTS)
-    private double geometricError = 0.0d;
-    private Node root;
-    private Properties properties;
+    protected double geometricError = 0.0d;
+    protected Node root;
+    protected Properties properties;
 
     @JsonIgnore
     public List<ContentInfo> findAllContentInfo() {

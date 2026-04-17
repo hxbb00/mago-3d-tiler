@@ -1,7 +1,10 @@
-package com.gaia3d.modifier;
+package com.gaia3d.modifier.billboard.plane;
 
 import com.gaia3d.TilerExtensionModule;
+import com.gaia3d.basic.geometry.GaiaBoundingBox;
 import com.gaia3d.basic.geometry.modifier.transform.GaiaBaker;
+import com.gaia3d.basic.geometry.modifier.transform.GaiaScaler;
+import com.gaia3d.basic.geometry.modifier.transform.GaiaScalerOptions;
 import com.gaia3d.basic.model.GaiaMaterial;
 import com.gaia3d.basic.model.GaiaNode;
 import com.gaia3d.basic.model.GaiaScene;
@@ -18,6 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.joml.Vector3d;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -29,9 +33,9 @@ import java.util.Map;
 @Setter
 @Slf4j
 @NoArgsConstructor
-public class TreeCreator {
+public class TreeBillboardCreator {
 
-    public void createTreeBillBoard(TreeBillBoardParameters treeBillBoardParameters, String inputPath, String outputPath) {
+    public void createTreeBillBoard(TreeBillBoardOptions treeBillBoardParameters, String inputPath, String outputPath) {
         // 1rst, load the tree model from the given path
         log.info("Loading tree model from path: {}", inputPath);
         AssimpConverterOptions options = AssimpConverterOptions.builder()
@@ -44,6 +48,28 @@ public class TreeCreator {
         // Flip Y tex-coordinates
         FlipYTexCoordinate flipYTexCoordinate = new FlipYTexCoordinate();
         gaiaScenes.forEach(flipYTexCoordinate::flip);
+
+        /*GaiaBoundingBox bbox = scene.updateBoundingBox();
+        Vector3d volume = bbox.getVolume();
+        double maxDimension = Math.max(volume.x, Math.max(volume.y, volume.z));
+        GaiaScalerOptions scalerOptions = GaiaScalerOptions.builder().scaleX(1.0 / maxDimension).scaleY(1.0 / maxDimension).scaleZ(1.0 / maxDimension).build();
+        GaiaScaler scaler = new GaiaScaler(scalerOptions);
+        scaler.apply(scene);*/
+
+        // Scale 1.0
+        for (GaiaScene gaiaScene : gaiaScenes) {
+            GaiaBoundingBox bbox = gaiaScene.updateBoundingBox();
+            Vector3d volume = bbox.getVolume();
+            double maxDimension = Math.max(volume.x, Math.max(volume.y, volume.z));
+            GaiaScalerOptions scalerOptions = GaiaScalerOptions.builder()
+                    .scaleX(1.0 / maxDimension)
+                    .scaleY(1.0 / maxDimension)
+                    .scaleZ(1.0 / maxDimension)
+                    .build();
+            GaiaScaler scaler = new GaiaScaler(scalerOptions);
+            scaler.apply(gaiaScene);
+        }
+
 
         TilerExtensionModule tilerExtensionModule = new TilerExtensionModule();
         int verticalPlanesCount = treeBillBoardParameters.getVerticalRectanglesCount();
@@ -58,7 +84,7 @@ public class TreeCreator {
             baker.apply(gaiaScene);
         }
 
-        int lodCount = 6;
+        int lodCount = 4;
         for (int i = 0; i < lodCount; i++) {
             if (i == 0) {
                 int maxTextureSize = 1024;
@@ -88,9 +114,12 @@ public class TreeCreator {
             // as a test, save glb file.
             GlobalOptions globalOptions = GlobalOptions.getInstance();
             globalOptions.setTilesVersion("1.1");
-            GaiaScene gaiaScene = resultGaiaScenes.get(0);
+            GaiaScene gaiaScene = resultGaiaScenes.getFirst();
 
             GltfWriterOptions gltfWriterOptions = GltfWriterOptions.builder()
+                    .isDoubleSided(true)
+                    //.isUseQuantization(true)
+                    //.isUseShortTexCoord(true)
                     .build();
             GltfWriter gltfWriter = new GltfWriter(gltfWriterOptions);
             //String outputFilePath = outputPath + File.separator + "tree_billboard_v" + verticalPlanesCount + "h" + horizontalPlanesCount + "_L" + i + ".glb";
