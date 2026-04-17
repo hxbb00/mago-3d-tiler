@@ -9,6 +9,7 @@ import com.gaia3d.basic.exchangable.GaiaSet;
 import com.gaia3d.basic.exchangable.SceneInfo;
 import com.gaia3d.basic.geometry.GaiaBoundingBox;
 import com.gaia3d.basic.geometry.entities.GaiaAAPlane;
+import com.gaia3d.basic.geometry.modifier.halfedge.HalfEdgeDecimator;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaTriangulator;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaWelder;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaWeldOptions;
@@ -1386,7 +1387,8 @@ public class PhotogrammetryTiler extends DefaultTiler implements Tiler {
                 continue;
             }
 
-            halfEdgeScene.decimate(decimateParameters); // new
+            HalfEdgeDecimator decimator = new HalfEdgeDecimator(decimateParameters);
+            decimator.apply(halfEdgeScene);
 
             if (halfEdgeScene.getTrianglesCount() == 0) {
                 continue;

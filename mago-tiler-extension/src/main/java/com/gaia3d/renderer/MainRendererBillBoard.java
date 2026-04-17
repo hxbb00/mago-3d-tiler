@@ -2,6 +2,7 @@ package com.gaia3d.renderer;
 
 import com.gaia3d.basic.geometry.GaiaBoundingBox;
 import com.gaia3d.basic.geometry.entities.GaiaAAPlane;
+import com.gaia3d.basic.geometry.modifier.halfedge.HalfEdgeDecimator;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaExtractor;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaSceneCleaner;
 import com.gaia3d.basic.geometry.modifier.topology.GaiaWelder;
@@ -253,7 +254,11 @@ public class MainRendererBillBoard implements IAppLogic {
         resultScenes.add(treeScene);
     }
 
-    public void decimateAndCutByObliqueCamera(List<GaiaScene> scenes, List<HalfEdgeScene> resultHalfEdgeScenes, DecimateParameters decimateParameters, HalfEdgeOctreeFaces octree, List<GaiaAAPlane> cuttingPlanes, double screenPixelsForMeter, boolean makeHorizontalSkirt) {
+    public void decimateAndCutByObliqueCamera(List<GaiaScene> scenes,
+                                              List<HalfEdgeScene> resultHalfEdgeScenes,
+                                              DecimateParameters decimateParameters,
+                                              HalfEdgeOctreeFaces octree,
+                                              List<GaiaAAPlane> cuttingPlanes, double screenPixelsForMeter, boolean makeHorizontalSkirt) {
         // Note : There are only one scene in the scenes list
         // Must init gl
         try {
@@ -317,7 +322,8 @@ public class MainRendererBillBoard implements IAppLogic {
 
         // take the halfEdgeScene and decimate and cut it
         HalfEdgeScene halfEdgeScene = halfEdgeScenes.get(0); // only one scene
-        halfEdgeScene.decimate(decimateParameters);
+        HalfEdgeDecimator decimator = new HalfEdgeDecimator(decimateParameters);
+        decimator.apply(halfEdgeScene);
 
         boolean scissorTextures = false;
         List<HalfEdgeScene> resultCutHalfEdgeScenes = HalfEdgeCutter.cutHalfEdgeSceneByGaiaAAPlanes(halfEdgeScene, cuttingPlanes, octree, scissorTextures, false);
