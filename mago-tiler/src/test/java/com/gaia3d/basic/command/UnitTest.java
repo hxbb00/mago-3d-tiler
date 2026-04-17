@@ -687,8 +687,8 @@ class UnitTest {
     @Test
     void testCollada_SangGiDe() {
         // _1building _2buildings _3buildings _4buildings _5buildings _6buildings _someBuildings
-        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\BB00-sangji-university_someBuildings\\";
-        String outputPath = "E:\\data\\mago-server\\output\\BB00-sangji-university_2_buildings_NOPRO\\";
+        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\BB00-sangji-university\\";
+        String outputPath = "E:\\data\\mago-server\\output\\BB00-sangji-university_NOPRO\\";
 
         String[] args = new String[]{
                 "-i", inputPath,
@@ -705,8 +705,8 @@ class UnitTest {
     @Test
     void test_JoGonHee_Incheon() {
         // someTiles
-        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\Incheon_CheongNa_JoGeonhee\\Production_6\\L22_4000Buildings\\";
-        String outputPath = "C:\\data\\mago-server\\output\\Incheon_P6_L22_4000Buildings\\";
+        String inputPath = "E:\\data\\mago3dtiler_TESTDATA\\Incheon_CheongNa_JoGeonhee\\Production_6\\L22_X016_4buildings\\";
+        String outputPath = "E:\\data\\mago-server\\output\\Incheon_P6_L22_X016_4buildings\\";
         //String outputPath = "E:\\temp\\";
 
         String[] args = new String[]{
